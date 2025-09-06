@@ -14,8 +14,149 @@ import {
   Star
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    profileComplete: 0,
+    matchesFound: 0,
+    collegesViewed: 0,
+    applications: 0
+  });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+
+  console.log('Dashboard render - user:', user, 'loading:', loading, 'stats:', stats);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Fetch user profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileData) {
+          setProfile(profileData);
+          
+          // Calculate profile completion
+          const fields = [profileData.full_name, profileData.location, profileData.phone];
+          const completedFields = fields.filter(field => field && field.trim() !== '').length;
+          const profileComplete = Math.round((completedFields / fields.length) * 100);
+          
+          setStats(prev => ({ ...prev, profileComplete }));
+        }
+
+        // Fetch quiz responses count
+        const { data: quizData } = await supabase
+          .from('quiz_responses')
+          .select('id')
+          .eq('user_id', user.id);
+
+        // Fetch recommendations count
+        const { data: recommendationsData } = await supabase
+          .from('recommendations')
+          .select('id')
+          .eq('user_id', user.id);
+
+        // Mock data for colleges viewed and applications
+        const collegesViewed = Math.floor(Math.random() * 50) + 10;
+        const applications = Math.floor(Math.random() * 10) + 1;
+
+        setStats(prev => ({
+          ...prev,
+          matchesFound: recommendationsData?.length || 0,
+          collegesViewed,
+          applications
+        }));
+
+        // Generate recent activity
+        const activity = [];
+        if (quizData?.length > 0) {
+          activity.push({
+            id: 'quiz-1',
+            action: 'Completed Career Interest Quiz',
+            time: '2 hours ago',
+            type: 'quiz'
+          });
+        }
+        if (recommendationsData?.length > 0) {
+          activity.push({
+            id: 'college-1',
+            action: 'Viewed IIT Delhi profile',
+            time: '1 day ago',
+            type: 'college'
+          });
+          activity.push({
+            id: 'scholarship-1',
+            action: 'Applied to Merit Scholarship',
+            time: '3 days ago',
+            type: 'scholarship'
+          });
+        }
+        setRecentActivity(activity.slice(0, 3));
+
+        // Fetch recommendations
+        const { data: recData } = await supabase
+          .from('recommendations')
+          .select('career_recommendations')
+          .eq('user_id', user.id)
+          .order('generated_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (recData && recData.career_recommendations) {
+          setRecommendations(recData.career_recommendations.slice(0, 3));
+        }
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user]);
+
+  // Show loading state while data is being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback if no user
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-4">No User Found</h1>
+          <p className="text-muted-foreground">Please log in to view your dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
   const quickActions = [
     {
       title: 'Take Career Quiz',
@@ -23,7 +164,7 @@ const Dashboard = () => {
       icon: Brain,
       href: '/quiz',
       gradient: 'bg-gradient-accent',
-      progress: 0
+      progress: stats.matchesFound > 0 ? 100 : 0
     },
     {
       title: 'Explore Colleges',
@@ -43,13 +184,17 @@ const Dashboard = () => {
     }
   ];
 
-  const recentActivity = [
-    { action: 'Completed Career Interest Quiz', time: '2 hours ago', icon: Brain },
-    { action: 'Viewed IIT Delhi profile', time: '1 day ago', icon: MapPin },
-    { action: 'Applied to Merit Scholarship', time: '3 days ago', icon: Award }
-  ];
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'quiz': return Brain;
+      case 'college': return MapPin;
+      case 'scholarship': return Award;
+      default: return Clock;
+    }
+  };
 
-  const recommendations = [
+  // Fallback recommendations if no data from database
+  const fallbackRecommendations = [
     {
       title: 'Computer Science Engineering',
       match: 92,
@@ -70,13 +215,16 @@ const Dashboard = () => {
     }
   ];
 
+  const displayRecommendations = recommendations.length > 0 ? recommendations : fallbackRecommendations;
+
+
   return (
     <div className="min-h-screen bg-gradient-primary">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Welcome Section */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-foreground mb-2">
-                Welcome back, Student! 👋
+                Welcome back, {profile?.full_name || 'Student'}! 👋
               </h1>
               <p className="text-muted-foreground">
                 Continue your journey to finding the perfect career path
@@ -91,7 +239,7 @@ const Dashboard = () => {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">85%</p>
+                <p className="text-2xl font-bold">{stats.profileComplete}%</p>
                 <p className="text-sm text-muted-foreground">Profile Complete</p>
               </div>
             </div>
@@ -103,7 +251,7 @@ const Dashboard = () => {
                 <Users className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">{stats.matchesFound}</p>
                 <p className="text-sm text-muted-foreground">Matches Found</p>
               </div>
             </div>
@@ -115,7 +263,7 @@ const Dashboard = () => {
                 <BookOpen className="h-6 w-6 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">47</p>
+                <p className="text-2xl font-bold">{stats.collegesViewed}</p>
                 <p className="text-sm text-muted-foreground">Colleges Viewed</p>
               </div>
             </div>
@@ -127,7 +275,7 @@ const Dashboard = () => {
                 <Target className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">3</p>
+                <p className="text-2xl font-bold">{stats.applications}</p>
                 <p className="text-sm text-muted-foreground">Applications</p>
               </div>
             </div>
@@ -182,7 +330,7 @@ const Dashboard = () => {
               <Card className="card-gradient border-border">
                 <div className="p-6">
                   <div className="space-y-4">
-                    {recommendations.map((rec, index) => (
+                    {displayRecommendations.map((rec, index) => (
                       <div key={index} className="flex items-center justify-between p-4 bg-secondary/20 rounded-lg border border-border/50">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
@@ -212,20 +360,30 @@ const Dashboard = () => {
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
                 <div className="space-y-4">
-                  {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <div className="p-2 bg-muted/50 rounded-lg">
-                        <activity.icon className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-foreground">{activity.action}</p>
-                        <div className="flex items-center space-x-1 mt-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{activity.time}</span>
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((activity) => {
+                      const ActivityIcon = getActivityIcon(activity.type);
+                      return (
+                        <div key={activity.id} className="flex items-start space-x-3">
+                          <div className="p-2 bg-muted/50 rounded-lg">
+                            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-foreground">{activity.action}</p>
+                            <div className="flex items-center space-x-1 mt-1">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">{activity.time}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground text-sm">No recent activity</p>
+                      <p className="text-muted-foreground text-xs mt-1">Start by taking a quiz or exploring colleges</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </Card>

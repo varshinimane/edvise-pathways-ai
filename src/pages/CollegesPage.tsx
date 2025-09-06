@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import CollegeMap from '@/components/CollegeMap';
-import Navigation from '@/components/Navigation';
 
 interface College {
   id: string;
@@ -21,7 +20,6 @@ const CollegesPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-primary">
-      <Navigation />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">

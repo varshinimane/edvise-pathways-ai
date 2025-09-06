@@ -24,17 +24,18 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const AdminDashboard = () => {
   const [colleges, setColleges] = useState([]);
   const [scholarships, setScholarships] = useState([]);
-  const [userStats, setUserStats] = useState({ total: 0, students: 0, admins: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [showAddCollege, setShowAddCollege] = useState(false);
   const [showAddScholarship, setShowAddScholarship] = useState(false);
   
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
+  const { analytics, loading: analyticsLoading, error: analyticsError } = useAnalytics();
 
   // New college form
   const [newCollege, setNewCollege] = useState({
@@ -226,8 +227,11 @@ const AdminDashboard = () => {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{userStats.total}</p>
+                <p className="text-2xl font-bold">{analytics?.totalUsers || 0}</p>
                 <p className="text-sm text-muted-foreground">Total Users</p>
+                {analytics?.recentSignups > 0 && (
+                  <p className="text-xs text-accent">+{analytics.recentSignups} this week</p>
+                )}
               </div>
             </div>
           </Card>
@@ -238,7 +242,7 @@ const AdminDashboard = () => {
                 <School className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{colleges.length}</p>
+                <p className="text-2xl font-bold">{analytics?.totalColleges || 0}</p>
                 <p className="text-sm text-muted-foreground">Colleges</p>
               </div>
             </div>
@@ -250,8 +254,8 @@ const AdminDashboard = () => {
                 <Award className="h-6 w-6 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{scholarships.length}</p>
-                <p className="text-sm text-muted-foreground">Scholarships</p>
+                <p className="text-2xl font-bold">{analytics?.activeScholarships || 0}</p>
+                <p className="text-sm text-muted-foreground">Active Scholarships</p>
               </div>
             </div>
           </Card>
@@ -262,8 +266,9 @@ const AdminDashboard = () => {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{userStats.students}</p>
-                <p className="text-sm text-muted-foreground">Students</p>
+                <p className="text-2xl font-bold">{analytics?.quizCompletionRate || 0}%</p>
+                <p className="text-sm text-muted-foreground">Quiz Completion</p>
+                <p className="text-xs text-muted-foreground">{analytics?.totalQuizzes || 0} quizzes taken</p>
               </div>
             </div>
           </Card>
@@ -513,42 +518,126 @@ const AdminDashboard = () => {
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-6">Platform Analytics</h3>
                 
+                {analyticsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading analytics...</p>
+                  </div>
+                ) : analyticsError ? (
                 <Alert className="mb-6">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Detailed analytics coming soon. This will include user engagement, quiz completion rates, and popular career paths.
-                  </AlertDescription>
+                    <AlertDescription>{analyticsError}</AlertDescription>
                 </Alert>
-
+                ) : analytics ? (
+                  <div className="space-y-6">
+                    {/* User Breakdown */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="p-4 bg-secondary/20 rounded-lg">
-                    <h4 className="font-medium text-foreground mb-2">User Breakdown</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
+                        <h4 className="font-medium text-foreground mb-4">User Breakdown</h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Students</span>
-                        <span className="text-sm font-medium">{userStats.students}</span>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-16 h-2 bg-muted rounded-full">
+                                <div 
+                                  className="h-2 bg-accent rounded-full" 
+                                  style={{ width: `${analytics.students > 0 ? (analytics.students / analytics.totalUsers) * 100 : 0}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{analytics.students}</span>
+                            </div>
                       </div>
-                      <div className="flex justify-between">
+                          <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Admins</span>
-                        <span className="text-sm font-medium">{userStats.admins}</span>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-16 h-2 bg-muted rounded-full">
+                                <div 
+                                  className="h-2 bg-primary rounded-full" 
+                                  style={{ width: `${analytics.admins > 0 ? (analytics.admins / analytics.totalUsers) * 100 : 0}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{analytics.admins}</span>
+                            </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="p-4 bg-secondary/20 rounded-lg">
-                    <h4 className="font-medium text-foreground mb-2">Content Stats</h4>
-                    <div className="space-y-2">
+                        <h4 className="font-medium text-foreground mb-4">Content Stats</h4>
+                        <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Total Colleges</span>
-                        <span className="text-sm font-medium">{colleges.length}</span>
+                            <span className="text-sm font-medium">{analytics.totalColleges}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Active Scholarships</span>
-                        <span className="text-sm font-medium">{scholarships.filter((s: any) => s.is_active).length}</span>
+                            <span className="text-sm font-medium">{analytics.activeScholarships}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Total Quizzes</span>
+                            <span className="text-sm font-medium">{analytics.totalQuizzes}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Recommendations</span>
+                            <span className="text-sm font-medium">{analytics.totalRecommendations}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Popular Careers */}
+                    {analytics.popularCareers.length > 0 && (
+                      <div className="p-4 bg-secondary/20 rounded-lg">
+                        <h4 className="font-medium text-foreground mb-4">Popular Career Paths</h4>
+                        <div className="space-y-2">
+                          {analytics.popularCareers.map((career, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">{career.career}</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-20 h-2 bg-muted rounded-full">
+                                  <div 
+                                    className="h-2 bg-accent rounded-full" 
+                                    style={{ width: `${(career.count / analytics.popularCareers[0].count) * 100}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-medium">{career.count}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* User Engagement */}
+                    <div className="p-4 bg-secondary/20 rounded-lg">
+                      <h4 className="font-medium text-foreground mb-4">User Engagement (Last 7 Days)</h4>
+                      <div className="space-y-2">
+                        {analytics.userEngagement.map((day, index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                            </span>
+                            <div className="flex items-center space-x-4">
+                              <span className="text-xs text-muted-foreground">
+                                {day.activeUsers} active
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {day.quizCompletions} quizzes
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      No analytics data available yet.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </Card>
           </TabsContent>

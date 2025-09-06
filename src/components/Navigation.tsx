@@ -6,12 +6,13 @@ import {
   MapPin, 
   Award, 
   MessageCircle, 
-  Bell, 
   User,
   Menu,
   X,
   LogOut,
-  Settings
+  Settings,
+  Home,
+  BarChart3
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,10 +21,11 @@ const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: GraduationCap },
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
     { name: 'Quiz', path: '/quiz', icon: Brain },
     { name: 'Recommendations', path: '/recommendations', icon: Brain },
     { name: 'Colleges', path: '/colleges', icon: MapPin },
@@ -51,18 +53,19 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-0.5 ml-6">
             {navItems.map((item) => (
               <Link key={item.path} to={item.path}>
                 <Button 
                   variant={isActive(item.path) ? "default" : "ghost"} 
-                  className={`text-sm font-medium transition-all duration-200 ${
+                  size="sm"
+                  className={`text-xs font-medium transition-all duration-200 px-2 py-1 ${
                     isActive(item.path) 
                       ? "bg-primary text-primary-foreground shadow-medium" 
                       : "hover:bg-secondary/60"
                   }`}
                 >
-                  <item.icon className="h-4 w-4 mr-2" />
+                  <item.icon className="h-3 w-3 mr-1" />
                   {item.name}
                 </Button>
               </Link>
@@ -71,11 +74,6 @@ const Navigation = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-accent rounded-full"></span>
-            </Button>
-            
             {/* User Menu */}
             <div className="relative">
               <Button 
@@ -99,12 +97,20 @@ const Navigation = () => {
                       </p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>
-                    <Link to="/admin" className="block">
+                    <Link to="/profile" className="block">
                       <Button variant="ghost" size="sm" className="w-full justify-start mt-2">
                         <Settings className="h-4 w-4 mr-2" />
-                        Admin Panel
+                        Profile Settings
                       </Button>
                     </Link>
+                    {isAdmin && (
+                      <Link to="/admin" className="block">
+                        <Button variant="ghost" size="sm" className="w-full justify-start">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Admin Panel
+                        </Button>
+                      </Link>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="sm" 

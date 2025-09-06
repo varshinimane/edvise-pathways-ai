@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Navigation from "./components/Navigation";
+import HomePage from "./pages/HomePage";
 import Dashboard from "./pages/Dashboard";
 import Quiz from "./pages/Quiz";
 import CollegesPage from "./pages/CollegesPage";
@@ -13,6 +14,7 @@ import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import Recommendations from "./pages/Recommendations";
+import ProfileSettings from "./pages/ProfileSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,7 +43,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Admin route wrapper
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   
   if (loading) {
     return (
@@ -58,8 +60,10 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" replace />;
   }
   
-  // For now, we'll check admin status later via profile lookup
-  // In production, you'd want to check user role from profiles table
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   return <>{children}</>;
 };
 
@@ -72,6 +76,11 @@ const AppContent = () => {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/" element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
@@ -105,6 +114,11 @@ const AppContent = () => {
           <AdminRoute>
             <AdminDashboard />
           </AdminRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ProfileSettings />
+          </ProtectedRoute>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
