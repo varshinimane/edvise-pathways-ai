@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,8 @@ import {
   Award,
   MapPin
 } from 'lucide-react';
+import { useGemini } from '@/hooks/useGemini';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -25,12 +27,14 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m your AI career advisor. I can help you with career guidance, scholarship information, and college recommendations. What would you like to know?',
+      content: 'Hello! I\'m your AI career advisor from EdVise. I can help you with career guidance, scholarship information, and college recommendations. What would you like to know?',
       sender: 'bot',
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const { callGeminiAPI, isLoading } = useGemini();
+  const { user } = useAuth();
 
   const quickQuestions = [
     {
@@ -51,8 +55,8 @@ const Chat = () => {
     }
   ];
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
 
     const newUserMessage: Message = {
       id: Date.now().toString(),
@@ -62,18 +66,34 @@ const Chat = () => {
     };
 
     setMessages(prev => [...prev, newUserMessage]);
+    const currentMessage = inputMessage;
     setInputMessage('');
 
-    // Simulate AI response
-    setTimeout(() => {
+    // Determine context based on message content
+    let context: 'career_guidance' | 'quiz_analysis' | 'scholarship_guidance' = 'career_guidance';
+    if (currentMessage.toLowerCase().includes('scholarship')) {
+      context = 'scholarship_guidance';
+    }
+
+    const response = await callGeminiAPI(currentMessage, context);
+    
+    if (response) {
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: generateBotResponse(inputMessage),
+        content: response.response,
         sender: 'bot',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+    } else {
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: 'I apologize, but I\'m having trouble connecting to my AI services right now. Please try again later or contact support if the issue persists.',
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    }
   };
 
   const generateBotResponse = (userMessage: string): string => {
