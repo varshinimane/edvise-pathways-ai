@@ -2,41 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Edvise Pathways Design System - Professional Educational Platform
+Dark navy theme with aqua/green accents, modern and calming
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core navy theme */
+    --background: 237 58% 12%; /* Deep navy #1A237E */
+    --foreground: 0 0% 98%; /* Pure white text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Card system - lighter blue-gray */
+    --card: 235 25% 18%; /* Light blue-gray cards */
+    --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 235 25% 18%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Aqua accent */
+    --primary: 178 78% 57%; /* Bright aqua #4ECDC4 */
+    --primary-foreground: 237 58% 12%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Soft blue-gray */
+    --secondary: 235 15% 25%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted elements */
+    --muted: 235 15% 22%;
+    --muted-foreground: 215 15% 70%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Success green */
+    --accent: 142 76% 59%; /* Soft green #4AE54A */
+    --accent-foreground: 237 58% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive - Warning red */
+    --destructive: 0 74% 58%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Interactive elements */
+    --border: 235 15% 25%;
+    --input: 235 15% 25%;
+    --ring: 178 78% 57%;
 
-    --radius: 0.5rem;
+    --radius: 1rem; /* 2xl rounded corners for professional look */
+
+    /* Custom gradients for beautiful backgrounds */
+    --gradient-primary: linear-gradient(135deg, hsl(237, 58%, 12%) 0%, hsl(235, 45%, 16%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(235, 25%, 18%) 0%, hsl(235, 20%, 22%) 100%);
+    --gradient-accent: linear-gradient(90deg, hsl(178, 78%, 57%) 0%, hsl(142, 76%, 59%) 100%);
+
+    /* Shadows for depth */
+    --shadow-soft: 0 4px 20px -4px hsl(237, 58%, 8% / 0.3);
+    --shadow-medium: 0 8px 30px -8px hsl(237, 58%, 8% / 0.4);
+    --shadow-strong: 0 16px 40px -12px hsl(237, 58%, 8% / 0.5);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 
@@ -101,5 +124,46 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    background: var(--gradient-primary);
+    min-height: 100vh;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  /* Beautiful card styles */
+  .card-gradient {
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-soft);
+    transition: var(--transition-smooth);
+  }
+
+  .card-gradient:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+  }
+
+  /* Accent button styles */
+  .btn-accent-gradient {
+    background: var(--gradient-accent);
+    transition: var(--transition-bounce);
+  }
+
+  .btn-accent-gradient:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-medium);
   }
 }
