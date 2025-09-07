@@ -7,142 +7,266 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Brain, 
-  ArrowLeft, 
   ArrowRight, 
+  RotateCcw, 
   CheckCircle, 
-  Sparkles,
-  BookOpen,
-  Code,
-  Palette,
-  Stethoscope,
-  Calculator,
-  Loader2,
+  Loader2, 
   AlertCircle,
   TrendingUp,
   Users,
-  Briefcase
+  Briefcase,
+  Code,
+  Heart,
+  GraduationCap,
+  Palette,
+  BarChart3,
+  Microscope,
+  Wrench,
+  Wifi,
+  WifiOff,
+  Globe
 } from 'lucide-react';
-import { useGemini } from '@/hooks/useGemini';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface QuizQuestion {
-  id: number;
-  category: string;
+  id: string;
   question: string;
   options: string[];
-  icon: any;
+  category: string;
+  language: string;
 }
 
 interface CareerRecommendation {
   title: string;
-  match: number;
   description: string;
-  icon: any;
-  reasons: string[];
-  salary_range?: string;
-  growth_prospect?: string;
+  match_percentage: number;
+  reason: string;
+  required_education: string[];
+  skills: string[];
+  salary_range: string;
+  growth_prospects: string;
+  icon?: any;
 }
 
 interface QuizAnalysis {
-  personality_traits: string[];
+  summary: string;
   strengths: string[];
-  interests: string[];
   work_style: string;
   career_recommendations: CareerRecommendation[];
-  summary: string;
 }
 
-const quizQuestions: QuizQuestion[] = [
+// Simple fallback questions that always work
+const FALLBACK_QUESTIONS: QuizQuestion[] = [
   {
-    id: 1,
-    category: 'Interests',
-    question: 'Which activities do you find most engaging?',
-    options: [
-      'Solving complex mathematical problems',
-      'Creating art or design projects', 
-      'Building or fixing things',
-      'Helping and caring for others',
-      'Analyzing data and patterns'
-    ],
-    icon: Brain
+    id: 'q1',
+    question: 'What subjects do you enjoy studying the most?',
+    options: ['Science and Mathematics', 'Languages and Literature', 'Social Sciences', 'Arts and Design', 'Business and Economics'],
+    category: 'academic_interests',
+    language: 'en'
   },
   {
-    id: 2,
-    category: 'Skills',
-    question: 'What are your strongest skills?',
-    options: [
-      'Logical reasoning and problem-solving',
-      'Creative thinking and innovation',
-      'Communication and leadership', 
-      'Technical and analytical skills',
-      'Interpersonal and empathy skills'
-    ],
-    icon: Sparkles
+    id: 'q2',
+    question: 'What type of work environment do you prefer?',
+    options: ['Research laboratory', 'Office setting', 'Outdoor/Field work', 'Creative studio', 'Classroom/Teaching'],
+    category: 'work_environment',
+    language: 'en'
   },
   {
-    id: 3,
-    category: 'Work Environment',
-    question: 'What type of work environment appeals to you?',
-    options: [
-      'Quiet office with individual focus',
-      'Collaborative team environment',
-      'Hands-on workshop or lab',
-      'Dynamic field work',
-      'Research and academic setting'
-    ],
-    icon: BookOpen
+    id: 'q3',
+    question: 'How do you like to solve problems?',
+    options: ['Through data analysis', 'By discussing with others', 'Using creative approaches', 'Following established procedures', 'Through experimentation'],
+    category: 'problem_solving',
+    language: 'en'
   },
   {
-    id: 4,
-    category: 'Career Goals',
-    question: 'What motivates you most in a career?',
-    options: [
-      'Making a positive impact on society',
-      'Financial stability and growth',
-      'Creative expression and innovation',
-      'Continuous learning and discovery',
-      'Leadership and influence'
-    ],
-    icon: CheckCircle
+    id: 'q4',
+    question: 'What motivates you most in your work?',
+    options: ['Making discoveries', 'Helping others', 'Creating something new', 'Leading teams', 'Teaching and mentoring'],
+    category: 'motivation',
+    language: 'en'
   },
   {
-    id: 5,
-    category: 'Subjects',
-    question: 'Which subjects interest you the most?',
-    options: [
-      'Mathematics and Physics',
-      'Biology and Chemistry',
-      'Arts and Literature',
-      'Computer Science and Technology',
-      'Business and Economics'
-    ],
-    icon: Calculator
+    id: 'q5',
+    question: 'How do you prefer to learn new things?',
+    options: ['Through hands-on practice', 'By reading and research', 'Through group discussions', 'By watching demonstrations', 'Through trial and error'],
+    category: 'learning_style',
+    language: 'en'
+  },
+  {
+    id: 'q6',
+    question: 'What type of impact do you want to make?',
+    options: ['Scientific breakthroughs', 'Social change', 'Economic growth', 'Cultural enrichment', 'Educational advancement'],
+    category: 'impact_goals',
+    language: 'en'
+  },
+  {
+    id: 'q7',
+    question: 'How do you handle challenges?',
+    options: ['Analyze systematically', 'Seek help from others', 'Try multiple approaches', 'Follow proven methods', 'Learn from mistakes'],
+    category: 'challenge_handling',
+    language: 'en'
+  },
+  {
+    id: 'q8',
+    question: 'What kind of team role do you prefer?',
+    options: ['Technical expert', 'Team leader', 'Creative contributor', 'Supporting role', 'Independent worker'],
+    category: 'team_role',
+    language: 'en'
+  },
+  {
+    id: 'q9',
+    question: 'How important is work-life balance to you?',
+    options: ['Very important', 'Somewhat important', 'Not very important', 'Depends on the job', 'I prefer flexible schedules'],
+    category: 'work_life_balance',
+    language: 'en'
+  },
+  {
+    id: 'q10',
+    question: 'What type of career growth interests you?',
+    options: ['Technical specialization', 'Management roles', 'Entrepreneurship', 'Research and development', 'Consulting'],
+    category: 'career_growth',
+    language: 'en'
   }
 ];
 
+// Hindi questions
+const HINDI_QUESTIONS: QuizQuestion[] = [
+  {
+    id: 'q1',
+    question: 'आप किन विषयों का अध्ययन करना सबसे अधिक पसंद करते हैं?',
+    options: ['विज्ञान और गणित', 'भाषा और साहित्य', 'सामाजिक विज्ञान', 'कला और डिजाइन', 'व्यापार और अर्थशास्त्र'],
+    category: 'academic_interests',
+    language: 'hi'
+  },
+  {
+    id: 'q2',
+    question: 'आप किस प्रकार के कार्य वातावरण को पसंद करते हैं?',
+    options: ['अनुसंधान प्रयोगशाला', 'कार्यालय सेटिंग', 'बाहरी/क्षेत्र कार्य', 'रचनात्मक स्टूडियो', 'कक्षा/शिक्षण'],
+    category: 'work_environment',
+    language: 'hi'
+  },
+  {
+    id: 'q3',
+    question: 'आप समस्याओं को कैसे हल करना पसंद करते हैं?',
+    options: ['डेटा विश्लेषण के माध्यम से', 'दूसरों के साथ चर्चा करके', 'रचनात्मक दृष्टिकोण का उपयोग करके', 'स्थापित प्रक्रियाओं का पालन करके', 'प्रयोग के माध्यम से'],
+    category: 'problem_solving',
+    language: 'hi'
+  },
+  {
+    id: 'q4',
+    question: 'आपके काम में आपको क्या सबसे अधिक प्रेरित करता है?',
+    options: ['खोज करना', 'दूसरों की मदद करना', 'कुछ नया बनाना', 'टीमों का नेतृत्व करना', 'शिक्षण और मार्गदर्शन'],
+    category: 'motivation',
+    language: 'hi'
+  },
+  {
+    id: 'q5',
+    question: 'आप नई चीजें कैसे सीखना पसंद करते हैं?',
+    options: ['हाथों से अभ्यास के माध्यम से', 'पढ़ने और शोध के माध्यम से', 'समूह चर्चा के माध्यम से', 'प्रदर्शन देखकर', 'प्रयास और त्रुटि के माध्यम से'],
+    category: 'learning_style',
+    language: 'hi'
+  },
+  {
+    id: 'q6',
+    question: 'आप किस प्रकार का प्रभाव डालना चाहते हैं?',
+    options: ['वैज्ञानिक सफलताएं', 'सामाजिक परिवर्तन', 'आर्थिक विकास', 'सांस्कृतिक समृद्धि', 'शैक्षिक प्रगति'],
+    category: 'impact_goals',
+    language: 'hi'
+  },
+  {
+    id: 'q7',
+    question: 'आप चुनौतियों का सामना कैसे करते हैं?',
+    options: ['व्यवस्थित रूप से विश्लेषण करके', 'दूसरों से मदद मांगकर', 'कई दृष्टिकोण आजमाकर', 'सिद्ध तरीकों का पालन करके', 'गलतियों से सीखकर'],
+    category: 'challenge_handling',
+    language: 'hi'
+  },
+  {
+    id: 'q8',
+    question: 'आप किस प्रकार की टीम भूमिका पसंद करते हैं?',
+    options: ['तकनीकी विशेषज्ञ', 'टीम लीडर', 'रचनात्मक योगदानकर्ता', 'सहायक भूमिका', 'स्वतंत्र कार्यकर्ता'],
+    category: 'team_role',
+    language: 'hi'
+  },
+  {
+    id: 'q9',
+    question: 'आपके लिए काम-जीवन संतुलन कितना महत्वपूर्ण है?',
+    options: ['बहुत महत्वपूर्ण', 'कुछ हद तक महत्वपूर्ण', 'बहुत महत्वपूर्ण नहीं', 'नौकरी पर निर्भर करता है', 'मैं लचीले समय को पसंद करता हूं'],
+    category: 'work_life_balance',
+    language: 'hi'
+  },
+  {
+    id: 'q10',
+    question: 'किस प्रकार का करियर विकास आपको रुचिकर लगता है?',
+    options: ['तकनीकी विशेषज्ञता', 'प्रबंधन भूमिकाएं', 'उद्यमिता', 'अनुसंधान और विकास', 'परामर्श'],
+    category: 'career_growth',
+    language: 'hi'
+  }
+];
+
+const LANGUAGE_OPTIONS = [
+  { code: 'en', name: 'English' },
+  { code: 'hi', name: 'हिंदी' }
+];
+
 const Quiz = () => {
-  const { user } = useAuth();
-  const { callGeminiAPI, isLoading: geminiLoading, error: geminiError } = useGemini();
+  const [questions, setQuestions] = useState<QuizQuestion[]>(FALLBACK_QUESTIONS);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isCompleted, setIsCompleted] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<QuizAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [language, setLanguage] = useState<string>('en');
 
-  const progress = ((currentQuestion + 1) / quizQuestions.length) * 100;
-  const CurrentIcon = quizQuestions[currentQuestion]?.icon || Brain;
+  const { user } = useAuth();
+
+  // Debug: Log initial state
+  console.log('Quiz component mounted');
+  console.log('Initial questions:', FALLBACK_QUESTIONS.length);
+  console.log('Questions state:', questions.length);
+
+  // Load questions when language changes
+  useEffect(() => {
+    const loadQuestions = () => {
+      console.log('Loading questions for language:', language);
+      if (language === 'hi') {
+        setQuestions(HINDI_QUESTIONS);
+      } else {
+        setQuestions(FALLBACK_QUESTIONS);
+      }
+      console.log('Questions loaded:', questions.length);
+    };
+
+    loadQuestions();
+  }, [language]);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0;
 
   const handleAnswerSelect = (answer: string) => {
     setAnswers(prev => ({
       ...prev,
-      [currentQuestion]: answer
+      [questions[currentQuestion].id]: answer
     }));
   };
 
   const handleNext = async () => {
-    if (currentQuestion < quizQuestions.length - 1) {
+    if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     } else {
       await analyzeQuizResponses();
@@ -159,544 +283,493 @@ const Quiz = () => {
     setError(null);
 
     try {
-      // Prepare quiz data for Gemini analysis
-      const quizData = {
-        responses: answers,
-        questions: quizQuestions.map(q => ({
-          id: q.id,
-          category: q.category,
-          question: q.question,
-          options: q.options
-        }))
-      };
+      const quizData = questions.map(q => ({
+        questionId: q.id,
+        answer: answers[q.id] || 'No answer',
+        category: q.category
+      }));
 
-      // Create a comprehensive prompt for Gemini
-      const prompt = `Analyze this career assessment quiz responses and provide personalized career recommendations.
+      let analysisData;
 
-Quiz Responses:
-${Object.entries(answers).map(([questionId, answer]) => {
-  const question = quizQuestions.find(q => q.id === parseInt(questionId));
-  return `Q${questionId} (${question?.category}): ${question?.question}\nAnswer: ${answer}`;
-}).join('\n\n')}
+      console.log('Using rule-based analysis for reliable results');
+      
+      // Always use rule-based analysis for reliability
+      analysisData = await generateOfflineRecommendations(quizData);
+      console.log('Rule-based analysis completed:', analysisData);
 
-IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, explanations, or additional text. The response must be parseable JSON.
-
-Required JSON format:
-{
-  "personality_traits": ["trait1", "trait2", "trait3"],
-  "strengths": ["strength1", "strength2", "strength3"],
-  "interests": ["interest1", "interest2", "interest3"],
-  "work_style": "description of preferred work style",
-  "career_recommendations": [
-    {
-      "title": "Career Title",
-      "match": 85,
-      "description": "Brief description of the career",
-      "reasons": ["reason1", "reason2", "reason3"],
-      "salary_range": "₹X-Y LPA",
-      "growth_prospect": "High/Medium/Low"
-    }
-  ],
-  "summary": "Overall assessment summary"
-}
-
-Focus on Indian career opportunities and provide realistic salary ranges in INR. Include at least 3 career recommendations with match percentages between 70-95.`;
-
-      const geminiResponse = await callGeminiAPI(prompt, 'quiz_analysis');
-
-      if (geminiResponse?.response) {
-        try {
-          // Clean the response to extract JSON
-          let responseText = geminiResponse.response;
-          
-          // Try to extract JSON from the response if it's wrapped in markdown or other text
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            responseText = jsonMatch[0];
-          }
-          
-          // Parse the JSON response from Gemini
-          const parsedAnalysis = JSON.parse(responseText);
-          
-          // Validate the response structure
-          if (!parsedAnalysis.career_recommendations || !Array.isArray(parsedAnalysis.career_recommendations)) {
-            throw new Error('Invalid response structure from AI');
-          }
-          
-          // Map icons to recommendations
-          const iconMap = {
-            'Computer Science': Code,
-            'Data Science': Calculator,
-            'Engineering': Briefcase,
-            'Medicine': Stethoscope,
-            'Design': Palette,
-            'Business': TrendingUp,
-            'Education': BookOpen,
-            'Research': Brain,
-            'default': Briefcase
-          };
-
-          parsedAnalysis.career_recommendations = parsedAnalysis.career_recommendations.map((rec: any) => {
-            const iconKey = Object.keys(iconMap).find(key => 
-              rec.title.toLowerCase().includes(key.toLowerCase())
-            );
-            return {
-              ...rec,
-              icon: iconMap[iconKey as keyof typeof iconMap] || iconMap.default
-            };
-          });
-
-          setAnalysis(parsedAnalysis);
-
-          // Save quiz responses and analysis to database
-          await saveQuizData(parsedAnalysis);
-
-          setIsCompleted(true);
-        } catch (parseError) {
-          console.error('Error parsing Gemini response:', parseError);
-          console.error('Raw response:', geminiResponse.response);
-          
-          // Fallback: Create a basic analysis from quiz responses
-          const fallbackAnalysis = createFallbackAnalysis(answers);
-          setAnalysis(fallbackAnalysis);
-          setIsCompleted(true);
-        }
-      } else {
-        setError('Failed to get AI analysis. Please try again.');
-      }
-    } catch (err) {
-      console.error('Error analyzing quiz:', err);
-      setError('An error occurred while analyzing your responses. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const createFallbackAnalysis = (answers: Record<number, string>): QuizAnalysis => {
-    // Analyze answers to create basic recommendations
-    const answerText = Object.values(answers).join(' ').toLowerCase();
-    
-    let recommendations = [];
-    
-    // Simple keyword-based analysis
-    if (answerText.includes('mathematical') || answerText.includes('physics') || answerText.includes('computer science')) {
-      recommendations.push({
-        title: 'Computer Science Engineering',
-        match: 88,
-        description: 'Perfect for analytical minds who enjoy problem-solving and technology',
-        reasons: ['Strong mathematical foundation', 'Logical thinking skills', 'Interest in technology'],
-        salary_range: '₹6-15 LPA',
-        growth_prospect: 'High',
-        icon: Code
-      });
-    }
-    
-    if (answerText.includes('data') || answerText.includes('analytical') || answerText.includes('patterns')) {
-      recommendations.push({
-        title: 'Data Science & Analytics',
-        match: 85,
-        description: 'Ideal for those who love working with data and finding insights',
-        reasons: ['Analytical mindset', 'Pattern recognition skills', 'Data-driven approach'],
-        salary_range: '₹5-12 LPA',
-        growth_prospect: 'High',
-        icon: Calculator
-      });
-    }
-    
-    if (answerText.includes('helping') || answerText.includes('caring') || answerText.includes('biology')) {
-      recommendations.push({
-        title: 'Medicine & Healthcare',
-        match: 82,
-        description: 'Great for compassionate individuals who want to help others',
-        reasons: ['Caring nature', 'Interest in biology', 'Desire to help others'],
-        salary_range: '₹8-20 LPA',
-        growth_prospect: 'High',
-        icon: Stethoscope
-      });
-    }
-    
-    // Default recommendations if no specific matches
-    if (recommendations.length === 0) {
-      recommendations = [
-        {
-          title: 'Business Administration',
-          match: 75,
-          description: 'Versatile career path with opportunities in various industries',
-          reasons: ['Broad skill set', 'Leadership potential', 'Communication skills'],
-          salary_range: '₹4-10 LPA',
-          growth_prospect: 'Medium',
-          icon: TrendingUp
-        },
-        {
-          title: 'Engineering',
-          match: 78,
-          description: 'Technical career with strong problem-solving focus',
-          reasons: ['Technical aptitude', 'Problem-solving skills', 'Innovation mindset'],
-          salary_range: '₹5-12 LPA',
-          growth_prospect: 'High',
-          icon: Briefcase
-        }
-      ];
-    }
-    
-    return {
-      personality_traits: ['Analytical', 'Problem-solver', 'Goal-oriented'],
-      strengths: ['Logical thinking', 'Attention to detail', 'Persistence'],
-      interests: ['Technology', 'Problem-solving', 'Learning'],
-      work_style: 'Prefers structured environments with clear goals and challenges',
-      career_recommendations: recommendations,
-      summary: 'Based on your responses, you show strong analytical thinking and problem-solving abilities. These traits align well with technical and analytical career paths.'
-    };
-  };
-
-  const saveQuizData = async (analysis: QuizAnalysis) => {
-    if (!user) return;
-
-    try {
-      // Save quiz responses
+      // Save to database
       const { error: quizError } = await supabase
         .from('quiz_responses')
         .insert({
           user_id: user.id,
-          responses: answers,
+          responses: quizData,
           completed_at: new Date().toISOString()
         });
 
       if (quizError) {
         console.error('Error saving quiz responses:', quizError);
-        return;
       }
 
-      // Get the quiz response ID
-      const { data: quizData } = await supabase
-        .from('quiz_responses')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .single();
+      // Save recommendations
+      const { error: recError } = await supabase
+        .from('recommendations')
+        .insert({
+          user_id: user.id,
+          type: 'quiz_analysis',
+          data: analysisData,
+          created_at: new Date().toISOString()
+        });
 
-      if (quizData) {
-        // Save recommendations
-        const { error: recError } = await supabase
-          .from('recommendations')
-          .insert({
-            user_id: user.id,
-            quiz_response_id: quizData.id,
-            career_recommendations: analysis.career_recommendations,
-            course_recommendations: analysis.interests,
-            college_recommendations: [], // Can be populated later
-            scholarship_matches: [], // Can be populated later
-            generated_at: new Date().toISOString()
-          });
-
-        if (recError) {
-          console.error('Error saving recommendations:', recError);
-        }
+      if (recError) {
+        console.error('Error saving recommendations:', recError);
       }
-    } catch (err) {
-      console.error('Error saving quiz data:', err);
+
+      // Map icons to recommendations
+      const iconMap: { [key: string]: any } = {
+        'Software Engineer': Code,
+        'Data Scientist': TrendingUp,
+        'Doctor': Heart,
+        'Teacher': GraduationCap,
+        'Designer': Palette,
+        'Business Analyst': BarChart3,
+        'Researcher': Microscope,
+        'Engineer': Wrench,
+        'Research Scientist': Microscope,
+        'Business Analyst': BarChart3,
+        'Graphic Designer': Palette,
+        'Social Worker': Users
+      };
+
+      analysisData.career_recommendations = analysisData.career_recommendations.map((rec: any) => ({
+        ...rec,
+        icon: iconMap[rec.title] || Briefcase
+      }));
+
+      setAnalysis(analysisData);
+
+    } catch (error) {
+      console.error('Error analyzing quiz:', error);
+      // Fallback to offline analysis
+      const quizData = questions.map(q => ({
+        questionId: q.id,
+        answer: answers[q.id] || 'No answer',
+        category: q.category
+      }));
+      const fallbackAnalysis = await generateOfflineRecommendations(quizData);
+      setAnalysis(fallbackAnalysis);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
-  const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(prev => prev - 1);
+  const generateOfflineRecommendations = async (quizData: any[]): Promise<QuizAnalysis> => {
+    // Enhanced rule-based analysis
+    const interests: string[] = [];
+    const interestScores: { [key: string]: number } = {};
+    
+    quizData.forEach(response => {
+      const answer = response.answer.toLowerCase();
+      const category = response.category.toLowerCase();
+      
+      // Science and Research
+      if (answer.includes('science') || answer.includes('research') || answer.includes('experiment') || 
+          answer.includes('analysis') || answer.includes('discovery') || category.includes('science')) {
+        interests.push('science_research');
+        interestScores['science_research'] = (interestScores['science_research'] || 0) + 1;
+      }
+      
+      // Technology and Engineering
+      if (answer.includes('technology') || answer.includes('engineering') || answer.includes('computer') ||
+          answer.includes('software') || answer.includes('programming') || answer.includes('tech') ||
+          category.includes('technology') || category.includes('engineering')) {
+        interests.push('engineering_tech');
+        interestScores['engineering_tech'] = (interestScores['engineering_tech'] || 0) + 1;
+      }
+      
+      // Medical and Healthcare
+      if (answer.includes('health') || answer.includes('medical') || answer.includes('help people') ||
+          answer.includes('doctor') || answer.includes('nurse') || answer.includes('healthcare') ||
+          category.includes('health') || category.includes('medical')) {
+        interests.push('medical_healthcare');
+        interestScores['medical_healthcare'] = (interestScores['medical_healthcare'] || 0) + 1;
+      }
+      
+      // Business and Management
+      if (answer.includes('business') || answer.includes('management') || answer.includes('leadership') ||
+          answer.includes('entrepreneur') || answer.includes('finance') || answer.includes('marketing') ||
+          category.includes('business') || category.includes('management')) {
+        interests.push('business_management');
+        interestScores['business_management'] = (interestScores['business_management'] || 0) + 1;
+      }
+      
+      // Arts and Creative
+      if (answer.includes('art') || answer.includes('creative') || answer.includes('design') ||
+          answer.includes('music') || answer.includes('writing') || answer.includes('visual') ||
+          category.includes('art') || category.includes('creative')) {
+        interests.push('arts_creative');
+        interestScores['arts_creative'] = (interestScores['arts_creative'] || 0) + 1;
+      }
+      
+      // Education and Teaching
+      if (answer.includes('teaching') || answer.includes('education') || answer.includes('learn') ||
+          answer.includes('teacher') || answer.includes('student') || answer.includes('academic') ||
+          category.includes('education') || category.includes('teaching')) {
+        interests.push('education_teaching');
+        interestScores['education_teaching'] = (interestScores['education_teaching'] || 0) + 1;
+      }
+    });
+
+    // Sort interests by score and get top 3
+    const sortedInterests = Object.entries(interestScores)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([interest]) => interest);
+    
+    // If no specific interests found, use default analysis
+    const topInterests = sortedInterests.length > 0 ? sortedInterests : ['engineering_tech', 'business_management', 'science_research'];
+    
+    const recommendations: CareerRecommendation[] = [];
+    
+    if (topInterests.includes('science_research')) {
+      recommendations.push({
+        title: 'Research Scientist',
+        description: 'Conduct research in various scientific fields, analyze data, and contribute to scientific knowledge.',
+        match_percentage: 85,
+        reason: 'Your analytical thinking and interest in research make you well-suited for scientific careers.',
+        required_education: ['B.Sc', 'M.Sc', 'Ph.D', 'Research Programs'],
+        skills: ['Analytical Thinking', 'Research Skills', 'Data Analysis', 'Problem Solving'],
+        salary_range: '₹6-15 LPA',
+        growth_prospects: 'High growth potential in R&D sectors',
+        icon: Microscope
+      });
     }
+    
+    if (topInterests.includes('engineering_tech')) {
+      recommendations.push({
+        title: 'Software Engineer',
+        description: 'Design, develop, and maintain software applications and systems.',
+        match_percentage: 80,
+        reason: 'Your technical aptitude and problem-solving skills align with engineering roles.',
+        required_education: ['B.Tech', 'M.Tech', 'Diploma in Engineering'],
+        skills: ['Technical Skills', 'Programming', 'Design', 'Innovation'],
+        salary_range: '₹4-20 LPA',
+        growth_prospects: 'Excellent growth in tech industry',
+        icon: Code
+      });
+    }
+    
+    if (topInterests.includes('medical_healthcare')) {
+      recommendations.push({
+        title: 'Doctor',
+        description: 'Diagnose and treat patients, provide medical care and health advice.',
+        match_percentage: 85,
+        reason: 'Your desire to help others and interest in health sciences make you ideal for healthcare.',
+        required_education: ['MBBS', 'BDS', 'B.Pharm', 'Nursing', 'Physiotherapy'],
+        skills: ['Empathy', 'Attention to Detail', 'Communication', 'Critical Thinking'],
+        salary_range: '₹8-25 LPA',
+        growth_prospects: 'Stable and growing healthcare sector',
+        icon: Heart
+      });
+    }
+    
+    if (topInterests.includes('business_management')) {
+      recommendations.push({
+        title: 'Business Analyst',
+        description: 'Analyze business processes and recommend improvements for efficiency.',
+        match_percentage: 80,
+        reason: 'Your leadership potential and strategic thinking suit business and management roles.',
+        required_education: ['BBA', 'MBA', 'Commerce', 'Economics'],
+        skills: ['Leadership', 'Communication', 'Strategic Thinking', 'Financial Acumen'],
+        salary_range: '₹5-18 LPA',
+        growth_prospects: 'Growing demand in corporate sector',
+        icon: BarChart3
+      });
+    }
+    
+    if (topInterests.includes('arts_creative')) {
+      recommendations.push({
+        title: 'Graphic Designer',
+        description: 'Create visual concepts and designs for various media and communications.',
+        match_percentage: 80,
+        reason: 'Your creative abilities and artistic interests make you perfect for creative careers.',
+        required_education: ['BFA', 'MFA', 'Design Courses', 'Media Studies'],
+        skills: ['Creativity', 'Design Skills', 'Communication', 'Visual Thinking'],
+        salary_range: '₹3-12 LPA',
+        growth_prospects: 'Good opportunities in digital media',
+        icon: Palette
+      });
+    }
+    
+    if (topInterests.includes('education_teaching')) {
+      recommendations.push({
+        title: 'Teacher',
+        description: 'Educate and mentor students in various subjects and life skills.',
+        match_percentage: 85,
+        reason: 'Your passion for learning and helping others makes you ideal for education.',
+        required_education: ['B.Ed', 'M.Ed', 'Subject-specific degrees'],
+        skills: ['Communication', 'Patience', 'Subject Knowledge', 'Mentoring'],
+        salary_range: '₹3-10 LPA',
+        growth_prospects: 'Stable career with good job security',
+        icon: GraduationCap
+      });
+    }
+
+    // Add default recommendation if none match
+    if (recommendations.length === 0) {
+      recommendations.push({
+        title: 'Career Explorer',
+        description: 'Explore different career fields to find your passion and interests.',
+        match_percentage: 75,
+        reason: 'Your diverse interests suggest you would benefit from career exploration.',
+        required_education: ['Bachelor\'s Degree', 'Various Specializations'],
+        skills: ['Communication', 'Problem Solving', 'Adaptability', 'Learning'],
+        salary_range: '₹3-8 LPA',
+        growth_prospects: 'Good potential with experience and specialization',
+        icon: Briefcase
+      });
+    }
+
+    return {
+      summary: `Based on your quiz responses, you show interest in ${topInterests.length > 0 ? topInterests.join(', ') : 'various fields'}. Your top recommendation is ${recommendations[0]?.title}, which aligns well with your interests and skills.`,
+      strengths: ['Problem Solving', 'Communication', 'Adaptability'],
+      work_style: 'You prefer collaborative work environments with opportunities for growth and learning.',
+      career_recommendations: recommendations.slice(0, 5)
+    };
   };
 
   const handleRestart = () => {
     setCurrentQuestion(0);
     setAnswers({});
     setIsCompleted(false);
-    setIsAnalyzing(false);
     setAnalysis(null);
     setError(null);
+  };
+
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    handleRestart();
   };
 
   if (isCompleted && analysis) {
     return (
       <div className="min-h-screen bg-gradient-primary">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Card className="card-gradient border-border overflow-hidden">
-            <div className="p-8">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-accent rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="h-8 w-8 text-white" />
-                </div>
-                
-                <h1 className="text-2xl font-bold text-foreground mb-4">
-                  Quiz Completed Successfully! 🎉
-                </h1>
-                
-                <p className="text-muted-foreground mb-6">
-                  {analysis.summary}
-                </p>
-              </div>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              {isOffline ? <WifiOff className="h-6 w-6 text-orange-500" /> : <Wifi className="h-6 w-6 text-green-500" />}
+              <h1 className="text-3xl font-bold text-foreground">
+                {isOffline ? 'Offline Analysis Complete!' : 'Quiz Analysis Complete!'}
+              </h1>
+            </div>
+            <p className="text-muted-foreground">
+              {isOffline 
+                ? 'Results generated using offline recommendation engine' 
+                : 'AI-powered analysis of your career interests'
+              }
+            </p>
+          </div>
 
-              {/* Personality Analysis */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground mb-4">Your Profile Analysis</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="p-4 bg-primary/5 border border-primary/20">
-                    <h3 className="font-medium text-primary mb-3">Strengths</h3>
-                    <div className="space-y-2">
-                      {analysis.strengths.map((strength, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-primary rounded-full"></div>
-                          <span className="text-sm text-foreground">{strength}</span>
+          {/* Analysis Results */}
+          <div className="space-y-8">
+            {/* Summary */}
+            <Card className="card-gradient border-border p-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">Summary</h2>
+              <p className="text-muted-foreground">{analysis.summary}</p>
+            </Card>
+
+            {/* Strengths */}
+            <Card className="card-gradient border-border p-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">Your Strengths</h2>
+              <div className="flex flex-wrap gap-2">
+                {analysis.strengths.map((strength, index) => (
+                  <span key={index} className="px-3 py-1 bg-accent/20 text-accent rounded-full text-sm">
+                    {strength}
+                  </span>
+                ))}
+              </div>
+            </Card>
+
+            {/* Work Style */}
+            <Card className="card-gradient border-border p-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">Work Style</h2>
+              <p className="text-muted-foreground">{analysis.work_style}</p>
+            </Card>
+
+            {/* Career Recommendations */}
+            <Card className="card-gradient border-border p-6">
+              <h2 className="text-xl font-semibold text-foreground mb-6">Career Recommendations</h2>
+              <div className="space-y-6">
+                {analysis.career_recommendations.map((rec, index) => {
+                  const IconComponent = rec.icon || Briefcase;
+                  return (
+                    <div key={index} className="p-4 bg-secondary/20 rounded-lg">
+                      <div className="flex items-start space-x-4">
+                        <div className="p-2 bg-accent/10 rounded-lg">
+                          <IconComponent className="h-6 w-6 text-accent" />
                         </div>
-                      ))}
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-4 bg-accent/5 border border-accent/20">
-                    <h3 className="font-medium text-accent mb-3">Work Style</h3>
-                    <p className="text-sm text-foreground">{analysis.work_style}</p>
-                  </Card>
-                </div>
-              </div>
-
-              {/* Career Recommendations */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-foreground mb-4">Your Career Recommendations</h2>
-                <div className="space-y-4">
-                  {analysis.career_recommendations.map((rec, index) => {
-                    const RecIcon = rec.icon;
-                    return (
-                      <Card key={index} className="p-6 bg-secondary/5 border border-secondary/20 hover:shadow-lg transition-all">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                              <RecIcon className="h-5 w-5 text-primary" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-lg font-semibold text-foreground">{rec.title}</h3>
+                            <span className="px-2 py-1 bg-accent/20 text-accent rounded-full text-sm">
+                              {rec.match_percentage}% match
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mb-3">{rec.description}</p>
+                          <p className="text-sm text-foreground mb-3">{rec.reason}</p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <h4 className="font-medium text-foreground mb-1">Required Education:</h4>
+                              <p className="text-muted-foreground">{rec.required_education.join(', ')}</p>
                             </div>
                             <div>
-                              <h3 className="text-lg font-semibold text-foreground">{rec.title}</h3>
-                              <p className="text-sm text-muted-foreground">{rec.description}</p>
+                              <h4 className="font-medium text-foreground mb-1">Key Skills:</h4>
+                              <p className="text-muted-foreground">{rec.skills.join(', ')}</p>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">{rec.match}%</div>
-                            <div className="text-xs text-muted-foreground">Match</div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          <div>
-                            <h4 className="font-medium text-foreground mb-2">Why this career fits you:</h4>
-                            <ul className="space-y-1">
-                              {rec.reasons.map((reason, reasonIndex) => (
-                                <li key={reasonIndex} className="flex items-start space-x-2 text-sm text-muted-foreground">
-                                  <div className="w-1.5 h-1.5 bg-accent rounded-full mt-2 flex-shrink-0"></div>
-                                  <span>{reason}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            {rec.salary_range && (
-                              <div className="flex items-center space-x-1">
-                                <TrendingUp className="h-4 w-4 text-accent" />
-                                <span className="text-foreground font-medium">{rec.salary_range}</span>
-                              </div>
-                            )}
-                            {rec.growth_prospect && (
-                              <div className="flex items-center space-x-1">
-                                <Users className="h-4 w-4 text-primary" />
-                                <span className="text-foreground font-medium">{rec.growth_prospect} Growth</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })}
+                            <div>
+                              <h4 className="font-medium text-foreground mb-1">Salary Range:</h4>
+                              <p className="text-muted-foreground">{rec.salary_range}</p>
+                  </div>
+                            <div>
+                              <h4 className="font-medium text-foreground mb-1">Growth Prospects:</h4>
+                              <p className="text-muted-foreground">{rec.growth_prospects}</p>
                 </div>
+                  </div>
+                </div>
+                  </div>
+                </div>
+                  );
+                })}
               </div>
+            </Card>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  variant="accent"
-                  size="lg"
-                  onClick={() => window.location.href = '/recommendations'}
-                >
-                  View Detailed Report
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={handleRestart}
-                >
-                  Retake Quiz
+            {/* Actions */}
+            <div className="flex justify-center space-x-4">
+              <Button onClick={handleRestart} variant="outline">
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Take Quiz Again
+                    </Button>
+              <Button onClick={() => window.location.href = '/recommendations'}>
+                View All Recommendations
                 </Button>
               </div>
             </div>
-          </Card>
         </div>
       </div>
     );
   }
 
-  if (isAnalyzing) {
-    return (
-      <div className="min-h-screen bg-gradient-primary">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Card className="card-gradient border-border overflow-hidden">
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-gradient-accent rounded-full flex items-center justify-center mx-auto mb-6">
-                <Loader2 className="h-8 w-8 text-white animate-spin" />
-              </div>
-              
-              <h1 className="text-2xl font-bold text-foreground mb-4">
-                Analyzing Your Responses...
-              </h1>
-              
-              <p className="text-muted-foreground mb-8">
-                Our AI is processing your quiz responses to generate personalized career recommendations.
-                This may take a few moments.
-              </p>
-
-              <div className="flex items-center justify-center space-x-2 text-primary">
-                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
+  // Ensure we always have questions
+  if (questions.length === 0) {
+    console.log('No questions found, using fallback');
+    setQuestions(FALLBACK_QUESTIONS);
   }
-
-  const question = quizQuestions[currentQuestion];
 
   return (
     <div className="min-h-screen bg-gradient-primary">
-      {error && (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <Alert className="border-destructive/50 text-destructive mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </div>
-      )}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-accent rounded-lg flex items-center justify-center">
-              <Brain className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Career Assessment Quiz</h1>
-              <p className="text-muted-foreground">Discover your ideal career path</p>
-            </div>
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            {isOffline ? <WifiOff className="h-6 w-6 text-orange-500" /> : <Wifi className="h-6 w-6 text-green-500" />}
+            <h1 className="text-3xl font-bold text-foreground">Career Assessment Quiz</h1>
           </div>
+          <p className="text-muted-foreground mb-4">
+            {isOffline 
+              ? 'Working offline - using cached questions and offline recommendations' 
+              : 'AI-powered career guidance based on your interests and preferences'
+            }
+          </p>
           
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="text-primary font-medium">{Math.round(progress)}% complete</span>
-            </div>
-            <Progress value={progress} className="h-3" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Question {currentQuestion + 1} of {quizQuestions.length}</span>
-              <span>{question.category}</span>
-            </div>
+          {/* Language Selector */}
+          <div className="flex justify-center space-x-2">
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <Button
+                key={lang.code}
+                variant={language === lang.code ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleLanguageChange(lang.code)}
+              >
+                {lang.name}
+              </Button>
+            ))}
           </div>
         </div>
 
-        {/* Question Card */}
-        <Card className="card-gradient border-border overflow-hidden mb-8">
-          <div className="p-8">
-            <div className="flex items-start space-x-4 mb-6">
-              <div className="p-3 bg-primary/10 rounded-xl">
-                <CurrentIcon className="h-6 w-6 text-primary" />
+        {/* Progress */}
+        <div className="mb-8">
+          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+            <span>Question {currentQuestion + 1} of {questions.length}</span>
+            <span>{Math.round(progress)}% Complete</span>
               </div>
-              <div className="flex-1">
-                <div className="mb-2">
-                  <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                    {question.category}
-                  </span>
+          <Progress value={progress} className="h-2" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground leading-relaxed">
-                  {question.question}
+
+        {/* Question */}
+        <Card className="card-gradient border-border p-8">
+          <div className="text-center mb-8">
+            <Brain className="h-12 w-12 text-accent mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {questions[currentQuestion]?.question}
                 </h2>
-              </div>
+            <p className="text-sm text-muted-foreground">
+              Category: {questions[currentQuestion]?.category.replace('_', ' ')}
+            </p>
             </div>
 
             <RadioGroup 
-              value={answers[currentQuestion] || ''} 
+            value={answers[questions[currentQuestion]?.id] || ''}
               onValueChange={handleAnswerSelect}
-              className="space-y-3"
-            >
-              {question.options.map((option, index) => (
-                <div key={index} className="flex items-center space-x-3 p-4 rounded-lg hover:bg-secondary/20 transition-colors border border-transparent hover:border-border/50">
-                  <RadioGroupItem 
-                    value={option} 
-                    id={`option-${index}`}
-                    className="text-primary" 
-                  />
-                  <Label 
-                    htmlFor={`option-${index}`} 
-                    className="flex-1 text-foreground font-medium cursor-pointer"
-                  >
+            className="space-y-4"
+          >
+            {questions[currentQuestion]?.options.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <RadioGroupItem value={option} id={`option-${index}`} />
+                <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
                     {option}
                   </Label>
                 </div>
               ))}
             </RadioGroup>
-          </div>
-        </Card>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center">
+          {error && (
+            <Alert className="mt-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex justify-between mt-8">
           <Button 
             variant="outline" 
-            onClick={handlePrevious}
+              onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
             disabled={currentQuestion === 0}
-            className="flex items-center space-x-2"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Previous</span>
+              Previous
           </Button>
-
-          <div className="flex space-x-2">
-            {quizQuestions.map((_, index) => (
-              <div 
-                key={index}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  index === currentQuestion 
-                    ? 'bg-primary' 
-                    : index < currentQuestion 
-                      ? 'bg-accent' 
-                      : 'bg-muted'
-                }`}
-              />
-            ))}
-          </div>
 
           <Button 
             onClick={handleNext}
-            disabled={!answers[currentQuestion] || isAnalyzing}
-            variant="accent"
-            className="font-medium flex items-center space-x-2"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <span>{currentQuestion === quizQuestions.length - 1 ? 'Complete' : 'Next'}</span>
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
+              disabled={!answers[questions[currentQuestion]?.id]}
+              className="bg-accent hover:bg-accent/90"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analyzing...
+                </>
+              ) : currentQuestion === questions.length - 1 ? (
+                'Complete Quiz'
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
+              )}
           </Button>
         </div>
+        </Card>
       </div>
     </div>
   );

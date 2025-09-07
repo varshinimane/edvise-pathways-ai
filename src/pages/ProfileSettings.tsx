@@ -6,13 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { User, MapPin, Phone, CheckCircle, AlertCircle } from 'lucide-react';
-import { useUserData } from '@/hooks/useUserData';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const ProfileSettings = () => {
   const { user } = useAuth();
-  const { profile, updateProfile, loading } = useUserData();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   const [formData, setFormData] = useState({
@@ -21,15 +21,57 @@ const ProfileSettings = () => {
     phone: ''
   });
 
+  // Fetch profile data from Supabase
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        full_name: profile.full_name || '',
-        location: profile.location || '',
-        phone: profile.phone || ''
-      });
-    }
-  }, [profile]);
+    const fetchProfile = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Try to fetch existing profile
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching profile:', error);
+        }
+
+        if (profileData) {
+          setFormData({
+            full_name: profileData.full_name || '',
+            location: profileData.location || '',
+            phone: profileData.phone || ''
+          });
+        } else {
+          // Initialize with user metadata if no profile exists
+          setFormData({
+            full_name: user.user_metadata?.full_name || '',
+            location: '',
+            phone: ''
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Fallback to user metadata
+        setFormData({
+          full_name: user.user_metadata?.full_name || '',
+          location: '',
+          phone: ''
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -42,14 +84,26 @@ const ProfileSettings = () => {
     setMessage(null);
 
     try {
-      const { error } = await updateProfile(formData);
-      
+      // Upsert profile data to Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          full_name: formData.full_name,
+          location: formData.location,
+          phone: formData.phone,
+          role: 'student', // Default role
+          updated_at: new Date().toISOString()
+        });
+
       if (error) {
+        console.error('Error saving profile:', error);
         setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
       } else {
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
       }
     } catch (error) {
+      console.error('Error saving profile:', error);
       setMessage({ type: 'error', text: 'An unexpected error occurred.' });
     } finally {
       setIsUpdating(false);
@@ -62,7 +116,7 @@ const ProfileSettings = () => {
     return Math.round((completedFields / fields.length) * 100);
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
         <div className="text-center">

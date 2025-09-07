@@ -93,7 +93,7 @@ const Navigation = () => {
                   <div className="p-2">
                     <div className="px-3 py-2 border-b border-border/50">
                       <p className="text-sm font-medium text-foreground">
-                        {user?.user_metadata?.full_name || 'User'}
+                        {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
                       </p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                     </div>

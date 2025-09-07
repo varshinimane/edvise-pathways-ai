@@ -27,11 +27,23 @@ const Dashboard = () => {
     applications: 0
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
-  console.log('Dashboard render - user:', user, 'loading:', loading, 'stats:', stats);
+  // Helper function to calculate time ago
+  const getTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -43,88 +55,114 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
-        // Fetch user profile
+        // Fetch user profile for completion calculation
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('*')
+          .select('full_name, location, phone')
           .eq('user_id', user.id)
           .single();
 
+        // Calculate real profile completion
+        let profileComplete = 0;
         if (profileData) {
-          setProfile(profileData);
-          
-          // Calculate profile completion
           const fields = [profileData.full_name, profileData.location, profileData.phone];
           const completedFields = fields.filter(field => field && field.trim() !== '').length;
-          const profileComplete = Math.round((completedFields / fields.length) * 100);
-          
-          setStats(prev => ({ ...prev, profileComplete }));
+          profileComplete = Math.round((completedFields / fields.length) * 100);
         }
 
         // Fetch quiz responses count
         const { data: quizData } = await supabase
           .from('quiz_responses')
-          .select('id')
+          .select('id, completed_at')
           .eq('user_id', user.id);
 
         // Fetch recommendations count
         const { data: recommendationsData } = await supabase
           .from('recommendations')
+          .select('id, created_at')
+          .eq('user_id', user.id);
+
+        // Fetch colleges viewed (if you have a colleges_viewed table)
+        const { data: collegesData } = await supabase
+          .from('colleges_viewed')
           .select('id')
           .eq('user_id', user.id);
 
-        // Mock data for colleges viewed and applications
-        const collegesViewed = Math.floor(Math.random() * 50) + 10;
-        const applications = Math.floor(Math.random() * 10) + 1;
+        // Fetch applications (if you have an applications table)
+        const { data: applicationsData } = await supabase
+          .from('applications')
+          .select('id')
+          .eq('user_id', user.id);
 
-        setStats(prev => ({
-          ...prev,
+        setStats({
+          profileComplete,
           matchesFound: recommendationsData?.length || 0,
-          collegesViewed,
-          applications
-        }));
+          collegesViewed: collegesData?.length || 0,
+          applications: applicationsData?.length || 0
+        });
 
-        // Generate recent activity
+        // Generate recent activity based on real data
         const activity = [];
+        
         if (quizData?.length > 0) {
+          const latestQuiz = quizData.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0];
+          const timeAgo = getTimeAgo(new Date(latestQuiz.completed_at));
           activity.push({
             id: 'quiz-1',
             action: 'Completed Career Interest Quiz',
-            time: '2 hours ago',
+            time: timeAgo,
             type: 'quiz'
           });
         }
+        
         if (recommendationsData?.length > 0) {
+          const latestRec = recommendationsData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          const timeAgo = getTimeAgo(new Date(latestRec.created_at));
           activity.push({
-            id: 'college-1',
-            action: 'Viewed IIT Delhi profile',
-            time: '1 day ago',
-            type: 'college'
-          });
-          activity.push({
-            id: 'scholarship-1',
-            action: 'Applied to Merit Scholarship',
-            time: '3 days ago',
-            type: 'scholarship'
+            id: 'rec-1',
+            action: 'Received Career Recommendations',
+            time: timeAgo,
+            type: 'recommendation'
           });
         }
-        setRecentActivity(activity.slice(0, 3));
-
-        // Fetch recommendations
-        const { data: recData } = await supabase
-          .from('recommendations')
-          .select('career_recommendations')
-          .eq('user_id', user.id)
-          .order('generated_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (recData && recData.career_recommendations) {
-          setRecommendations(recData.career_recommendations.slice(0, 3));
+        
+        if (profileComplete > 0) {
+          activity.push({
+            id: 'profile-1',
+            action: 'Updated Profile',
+            time: 'Recently',
+            type: 'profile'
+          });
         }
+
+        // Add welcome activity if no other activities
+        if (activity.length === 0) {
+          activity.push({
+            id: 'welcome-1',
+            action: 'Welcome to EdVise!',
+            time: 'Just now',
+            type: 'welcome'
+          });
+        }
+
+        setRecentActivity(activity);
+        setRecommendations(recommendationsData || []);
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        // Set fallback data
+        setStats({
+          profileComplete: 0,
+          matchesFound: 0,
+          collegesViewed: 0,
+          applications: 0
+        });
+        setRecentActivity([{
+          id: 'welcome-1',
+          action: 'Welcome to EdVise!',
+          time: 'Just now',
+          type: 'welcome'
+        }]);
       } finally {
         setLoading(false);
       }
@@ -133,7 +171,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user]);
 
-  // Show loading state while data is being fetched
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
@@ -145,13 +182,14 @@ const Dashboard = () => {
     );
   }
 
-  // Fallback if no user
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">No User Found</h1>
-          <p className="text-muted-foreground">Please log in to view your dashboard.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-4">Please log in to view your dashboard</h1>
+          <Link to="/auth">
+            <Button>Go to Login</Button>
+          </Link>
         </div>
       </div>
     );
@@ -159,64 +197,35 @@ const Dashboard = () => {
 
   const quickActions = [
     {
+      id: 'quiz',
       title: 'Take Career Quiz',
       description: 'Discover your ideal career path with our AI-powered assessment',
       icon: Brain,
-      href: '/quiz',
-      gradient: 'bg-gradient-accent',
-      progress: stats.matchesFound > 0 ? 100 : 0
+      progress: stats.matchesFound > 0 ? 100 : 0,
+      action: 'Get Started →',
+      href: '/quiz'
     },
     {
-      title: 'Explore Colleges',
-      description: 'Find colleges near you with interactive maps',
-      icon: MapPin,
-      href: '/colleges',
-      gradient: 'bg-primary',
-      progress: null
-    },
-    {
-      title: 'Find Scholarships',
-      description: 'Browse government scholarships matching your profile',
-      icon: Award,
-      href: '/scholarships',
-      gradient: 'bg-secondary',
-      progress: null
+      id: 'recommendations',
+      title: 'View Recommendations',
+      description: 'Explore personalized career and college recommendations',
+      icon: TrendingUp,
+      progress: stats.matchesFound > 0 ? 100 : 0,
+      action: 'View All →',
+      href: '/recommendations'
     }
   ];
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'quiz': return Brain;
+      case 'recommendation': return TrendingUp;
+      case 'profile': return Users;
       case 'college': return MapPin;
-      case 'scholarship': return Award;
-      default: return Clock;
+      case 'application': return Award;
+      default: return Star;
     }
   };
-
-  // Fallback recommendations if no data from database
-  const fallbackRecommendations = [
-    {
-      title: 'Computer Science Engineering',
-      match: 92,
-      reason: 'Strong analytical skills and programming interest',
-      colleges: 15
-    },
-    {
-      title: 'Data Science',
-      match: 87,
-      reason: 'Excellent mathematical foundation',
-      colleges: 8
-    },
-    {
-      title: 'Artificial Intelligence',
-      match: 84,
-      reason: 'High logical reasoning scores',
-      colleges: 12
-    }
-  ];
-
-  const displayRecommendations = recommendations.length > 0 ? recommendations : fallbackRecommendations;
-
 
   return (
     <div className="min-h-screen bg-gradient-primary">
@@ -224,7 +233,7 @@ const Dashboard = () => {
             {/* Welcome Section */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-foreground mb-2">
-                Welcome back, {profile?.full_name || 'Student'}! 👋
+            Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student'}! 👋
               </h1>
               <p className="text-muted-foreground">
                 Continue your journey to finding the perfect career path
@@ -236,7 +245,7 @@ const Dashboard = () => {
           <Card className="card-gradient border-border p-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-primary" />
+                <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.profileComplete}%</p>
@@ -248,7 +257,7 @@ const Dashboard = () => {
           <Card className="card-gradient border-border p-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-accent/10 rounded-lg">
-                <Users className="h-6 w-6 text-accent" />
+                <TrendingUp className="h-6 w-6 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.matchesFound}</p>
@@ -284,123 +293,93 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Quick Actions */}
-          <div className="lg:col-span-2 space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-                {quickActions.map((action, index) => (
-                  <Card key={index} className="card-gradient border-border overflow-hidden group">
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className={`p-3 ${action.gradient} rounded-xl`}>
-                          <action.icon className="h-6 w-6 text-white" />
+          <div className="lg:col-span-2">
+            <h2 className="text-xl font-semibold text-foreground mb-6">Quick Actions</h2>
+            <div className="space-y-4">
+              {quickActions.map((action) => {
+                const IconComponent = action.icon;
+                return (
+                  <Card key={action.id} className="card-gradient border-border p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-accent/10 rounded-lg">
+                          <IconComponent className="h-6 w-6 text-accent" />
                         </div>
-                        <Link to={action.href}>
-                          <Button 
-                            variant="accent" 
-                            size="lg"
-                            className="group-hover:shadow-strong transition-all"
-                          >
-                            Get Started
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">{action.title}</h3>
-                      <p className="text-muted-foreground text-sm mb-4">{action.description}</p>
-                      
-                      {action.progress !== null && (
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Progress</span>
-                            <span className="text-primary font-medium">{action.progress}%</span>
-                          </div>
-                          <Progress value={action.progress} className="h-2" />
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Recommendations */}
-            <div>
-              <h2 className="text-xl font-semibold text-foreground mb-4">AI Career Recommendations</h2>
-              <Card className="card-gradient border-border">
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {displayRecommendations.map((rec, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-secondary/20 rounded-lg border border-border/50">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="font-medium text-foreground">{rec.title}</h3>
-                            <div className="flex items-center space-x-1">
-                              <Star className="h-4 w-4 text-accent fill-current" />
-                              <span className="text-sm font-medium text-accent">{rec.match}% match</span>
-                            </div>
+                          <h3 className="text-lg font-semibold text-foreground mb-1">{action.title}</h3>
+                          <p className="text-sm text-muted-foreground mb-3">{action.description}</p>
+                          <div className="flex items-center space-x-2">
+                            <Progress value={action.progress} className="flex-1 h-2" />
+                            <span className="text-xs text-muted-foreground">{action.progress}%</span>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">{rec.reason}</p>
-                          <p className="text-xs text-primary">{rec.colleges} colleges available</p>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Explore
-                        </Button>
                       </div>
-                    ))}
-                  </div>
+                      <Link to={action.href}>
+                        <Button variant="accent" size="sm">
+                          {action.action}
+                        </Button>
+                      </Link>
                 </div>
               </Card>
+                );
+              })}
             </div>
           </div>
 
-          {/* Recent Activity Sidebar */}
-          <div className="space-y-6">
-            <Card className="card-gradient border-border">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
+          {/* Recent Activity */}
+          <div>
+            <h2 className="text-xl font-semibold text-foreground mb-6">Recent Activity</h2>
+            <Card className="card-gradient border-border p-6">
                 <div className="space-y-4">
-                  {recentActivity.length > 0 ? (
-                    recentActivity.map((activity) => {
-                      const ActivityIcon = getActivityIcon(activity.type);
-                      return (
-                        <div key={activity.id} className="flex items-start space-x-3">
-                          <div className="p-2 bg-muted/50 rounded-lg">
-                            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm text-foreground">{activity.action}</p>
-                            <div className="flex items-center space-x-1 mt-1">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">{activity.time}</span>
-                            </div>
-                          </div>
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => {
+                    const IconComponent = getActivityIcon(activity.type);
+                    return (
+                      <div key={activity.id} className="flex items-center space-x-3">
+                        <div className="p-2 bg-accent/10 rounded-lg">
+                          <IconComponent className="h-4 w-4 text-accent" />
+                      </div>
+                      <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{activity.action}</p>
+                          <p className="text-xs text-muted-foreground">{activity.time}</p>
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground text-sm">No recent activity</p>
-                      <p className="text-muted-foreground text-xs mt-1">Start by taking a quiz or exploring colleges</p>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4">
+                    <Star className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No recent activity</p>
                     </div>
-                  )}
-                </div>
+                )}
               </div>
             </Card>
 
             {/* Next Steps */}
-            <Card className="card-gradient border-border">
-              <div className="p-6">
+            <Card className="card-gradient border-border p-6 mt-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">Next Steps</h3>
                 <div className="space-y-3">
-                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <p className="text-sm text-foreground font-medium">Complete your profile</p>
-                    <p className="text-xs text-muted-foreground mt-1">Add skills and preferences</p>
+                {stats.profileComplete < 100 && (
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-accent rounded-full"></div>
+                    <Link to="/profile" className="text-sm text-accent hover:underline">
+                      Complete your profile
+                    </Link>
                   </div>
-                  <div className="p-3 bg-accent/5 border border-accent/20 rounded-lg">
-                    <p className="text-sm text-foreground font-medium">Take aptitude test</p>
-                    <p className="text-xs text-muted-foreground mt-1">Get personalized recommendations</p>
+                )}
+                {stats.matchesFound === 0 && (
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-accent rounded-full"></div>
+                    <Link to="/quiz" className="text-sm text-accent hover:underline">
+                      Take the career quiz
+                    </Link>
                   </div>
+                )}
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-accent rounded-full"></div>
+                  <Link to="/colleges" className="text-sm text-accent hover:underline">
+                    Explore colleges
+                  </Link>
                 </div>
               </div>
             </Card>

@@ -70,6 +70,53 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-primary">
+      {/* Header */}
+      <div className="bg-background/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-accent rounded-xl flex items-center justify-center">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-foreground">EdVise</span>
+            </div>
+
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <Link to="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
+              <Link to="/quiz" className="text-muted-foreground hover:text-foreground transition-colors">
+                Quiz
+              </Link>
+              <Link to="/recommendations" className="text-muted-foreground hover:text-foreground transition-colors">
+                Recommendations
+              </Link>
+              <Link to="/scholarships" className="text-muted-foreground hover:text-foreground transition-colors">
+                Scholarships
+              </Link>
+              <Link to="/colleges" className="text-muted-foreground hover:text-foreground transition-colors">
+                Colleges
+              </Link>
+            </nav>
+
+            {/* User Actions */}
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                  <span className="text-sm">🔔</span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full"></div>
+              </div>
+              <div className="w-8 h-8 bg-gradient-accent rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-white">VM</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Background Illustration */}

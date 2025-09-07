@@ -1,0 +1,74 @@
+{
+  "name": "EdVise - Career Guidance Platform",
+  "short_name": "EdVise",
+  "description": "AI-powered career guidance and college recommendation platform for Indian students",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "features": [
+    "offline-support",
+    "background-sync",
+    "push-notifications"
+  ],
+  "shortcuts": [
+    {
+      "name": "Take Quiz",
+      "short_name": "Quiz",
+      "description": "Start career assessment quiz",
+      "url": "/quiz",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View Colleges",
+      "short_name": "Colleges",
+      "description": "Browse colleges and universities",
+      "url": "/colleges",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Scholarships",
+      "short_name": "Scholarships",
+      "description": "Find scholarship opportunities",
+      "url": "/scholarships",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
