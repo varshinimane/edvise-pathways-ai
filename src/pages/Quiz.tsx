@@ -28,10 +28,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { generateOfflineRecommendations } from '@/lib/offlineRecommendationEngine';
 
 interface QuizQuestion {
   id: string;
-  question: string;
+  question: string;  
   options: string[];
   category: string;
   language: string;
@@ -54,6 +55,7 @@ interface QuizAnalysis {
   strengths: string[];
   work_style: string;
   career_recommendations: CareerRecommendation[];
+  course_recommendations?: string[];
 }
 
 // Simple fallback questions that always work
@@ -213,7 +215,6 @@ const Quiz = () => {
   const [questions, setQuestions] = useState<QuizQuestion[]>(FALLBACK_QUESTIONS);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [isCompleted, setIsCompleted] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<QuizAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -221,11 +222,6 @@ const Quiz = () => {
   const [language, setLanguage] = useState<string>('en');
 
   const { user } = useAuth();
-
-  // Debug: Log initial state
-  console.log('Quiz component mounted');
-  console.log('Initial questions:', FALLBACK_QUESTIONS.length);
-  console.log('Questions state:', questions.length);
 
   // Load questions when language changes
   useEffect(() => {
@@ -236,7 +232,6 @@ const Quiz = () => {
       } else {
         setQuestions(FALLBACK_QUESTIONS);
       }
-      console.log('Questions loaded:', questions.length);
     };
 
     loadQuestions();
@@ -289,12 +284,10 @@ const Quiz = () => {
         category: q.category
       }));
 
-      let analysisData;
-
       console.log('Using rule-based analysis for reliable results');
       
-      // Always use rule-based analysis for reliability
-      analysisData = await generateOfflineRecommendations(quizData);
+      // Use offline recommendation engine for consistent results
+      const analysisData = generateOfflineRecommendations(quizData);
       console.log('Rule-based analysis completed:', analysisData);
 
       // Save to database
@@ -302,8 +295,7 @@ const Quiz = () => {
         .from('quiz_responses')
         .insert({
           user_id: user.id,
-          responses: quizData,
-          completed_at: new Date().toISOString()
+          responses: quizData
         });
 
       if (quizError) {
@@ -315,9 +307,10 @@ const Quiz = () => {
         .from('recommendations')
         .insert({
           user_id: user.id,
-          type: 'quiz_analysis',
-          data: analysisData,
-          created_at: new Date().toISOString()
+          career_recommendations: analysisData.career_recommendations as any,
+          course_recommendations: { courses: analysisData.course_recommendations || [] } as any,
+          college_recommendations: [],
+          scholarship_matches: []
         });
 
       if (recError) {
@@ -329,14 +322,20 @@ const Quiz = () => {
         'Software Engineer': Code,
         'Data Scientist': TrendingUp,
         'Doctor': Heart,
+        'Doctor (MBBS)': Heart,
         'Teacher': GraduationCap,
+        'School Teacher': GraduationCap,
         'Designer': Palette,
+        'Graphic Designer': Palette,
         'Business Analyst': BarChart3,
         'Researcher': Microscope,
-        'Engineer': Wrench,
         'Research Scientist': Microscope,
-        'Business Analyst': BarChart3,
-        'Graphic Designer': Palette,
+        'Engineer': Wrench,
+        'Electronics Engineer': Wrench,
+        'Marketing Manager': BarChart3,
+        'Content Writer': Palette,
+        'Corporate Trainer': Users,
+        'Nurse': Heart,
         'Social Worker': Users
       };
 
@@ -355,313 +354,123 @@ const Quiz = () => {
         answer: answers[q.id] || 'No answer',
         category: q.category
       }));
-      const fallbackAnalysis = await generateOfflineRecommendations(quizData);
+      const fallbackAnalysis = generateOfflineRecommendations(quizData);
       setAnalysis(fallbackAnalysis);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const generateOfflineRecommendations = async (quizData: any[]): Promise<QuizAnalysis> => {
-    // Enhanced rule-based analysis
-    const interests: string[] = [];
-    const interestScores: { [key: string]: number } = {};
-    
-    quizData.forEach(response => {
-      const answer = response.answer.toLowerCase();
-      const category = response.category.toLowerCase();
-      
-      // Science and Research
-      if (answer.includes('science') || answer.includes('research') || answer.includes('experiment') || 
-          answer.includes('analysis') || answer.includes('discovery') || category.includes('science')) {
-        interests.push('science_research');
-        interestScores['science_research'] = (interestScores['science_research'] || 0) + 1;
-      }
-      
-      // Technology and Engineering
-      if (answer.includes('technology') || answer.includes('engineering') || answer.includes('computer') ||
-          answer.includes('software') || answer.includes('programming') || answer.includes('tech') ||
-          category.includes('technology') || category.includes('engineering')) {
-        interests.push('engineering_tech');
-        interestScores['engineering_tech'] = (interestScores['engineering_tech'] || 0) + 1;
-      }
-      
-      // Medical and Healthcare
-      if (answer.includes('health') || answer.includes('medical') || answer.includes('help people') ||
-          answer.includes('doctor') || answer.includes('nurse') || answer.includes('healthcare') ||
-          category.includes('health') || category.includes('medical')) {
-        interests.push('medical_healthcare');
-        interestScores['medical_healthcare'] = (interestScores['medical_healthcare'] || 0) + 1;
-      }
-      
-      // Business and Management
-      if (answer.includes('business') || answer.includes('management') || answer.includes('leadership') ||
-          answer.includes('entrepreneur') || answer.includes('finance') || answer.includes('marketing') ||
-          category.includes('business') || category.includes('management')) {
-        interests.push('business_management');
-        interestScores['business_management'] = (interestScores['business_management'] || 0) + 1;
-      }
-      
-      // Arts and Creative
-      if (answer.includes('art') || answer.includes('creative') || answer.includes('design') ||
-          answer.includes('music') || answer.includes('writing') || answer.includes('visual') ||
-          category.includes('art') || category.includes('creative')) {
-        interests.push('arts_creative');
-        interestScores['arts_creative'] = (interestScores['arts_creative'] || 0) + 1;
-      }
-      
-      // Education and Teaching
-      if (answer.includes('teaching') || answer.includes('education') || answer.includes('learn') ||
-          answer.includes('teacher') || answer.includes('student') || answer.includes('academic') ||
-          category.includes('education') || category.includes('teaching')) {
-        interests.push('education_teaching');
-        interestScores['education_teaching'] = (interestScores['education_teaching'] || 0) + 1;
-      }
-    });
-
-    // Sort interests by score and get top 3
-    const sortedInterests = Object.entries(interestScores)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 3)
-      .map(([interest]) => interest);
-    
-    // If no specific interests found, use default analysis
-    const topInterests = sortedInterests.length > 0 ? sortedInterests : ['engineering_tech', 'business_management', 'science_research'];
-    
-    const recommendations: CareerRecommendation[] = [];
-    
-    if (topInterests.includes('science_research')) {
-      recommendations.push({
-        title: 'Research Scientist',
-        description: 'Conduct research in various scientific fields, analyze data, and contribute to scientific knowledge.',
-        match_percentage: 85,
-        reason: 'Your analytical thinking and interest in research make you well-suited for scientific careers.',
-        required_education: ['B.Sc', 'M.Sc', 'Ph.D', 'Research Programs'],
-        skills: ['Analytical Thinking', 'Research Skills', 'Data Analysis', 'Problem Solving'],
-        salary_range: '₹6-15 LPA',
-        growth_prospects: 'High growth potential in R&D sectors',
-        icon: Microscope
-      });
-    }
-    
-    if (topInterests.includes('engineering_tech')) {
-      recommendations.push({
-        title: 'Software Engineer',
-        description: 'Design, develop, and maintain software applications and systems.',
-        match_percentage: 80,
-        reason: 'Your technical aptitude and problem-solving skills align with engineering roles.',
-        required_education: ['B.Tech', 'M.Tech', 'Diploma in Engineering'],
-        skills: ['Technical Skills', 'Programming', 'Design', 'Innovation'],
-        salary_range: '₹4-20 LPA',
-        growth_prospects: 'Excellent growth in tech industry',
-        icon: Code
-      });
-    }
-    
-    if (topInterests.includes('medical_healthcare')) {
-      recommendations.push({
-        title: 'Doctor',
-        description: 'Diagnose and treat patients, provide medical care and health advice.',
-        match_percentage: 85,
-        reason: 'Your desire to help others and interest in health sciences make you ideal for healthcare.',
-        required_education: ['MBBS', 'BDS', 'B.Pharm', 'Nursing', 'Physiotherapy'],
-        skills: ['Empathy', 'Attention to Detail', 'Communication', 'Critical Thinking'],
-        salary_range: '₹8-25 LPA',
-        growth_prospects: 'Stable and growing healthcare sector',
-        icon: Heart
-      });
-    }
-    
-    if (topInterests.includes('business_management')) {
-      recommendations.push({
-        title: 'Business Analyst',
-        description: 'Analyze business processes and recommend improvements for efficiency.',
-        match_percentage: 80,
-        reason: 'Your leadership potential and strategic thinking suit business and management roles.',
-        required_education: ['BBA', 'MBA', 'Commerce', 'Economics'],
-        skills: ['Leadership', 'Communication', 'Strategic Thinking', 'Financial Acumen'],
-        salary_range: '₹5-18 LPA',
-        growth_prospects: 'Growing demand in corporate sector',
-        icon: BarChart3
-      });
-    }
-    
-    if (topInterests.includes('arts_creative')) {
-      recommendations.push({
-        title: 'Graphic Designer',
-        description: 'Create visual concepts and designs for various media and communications.',
-        match_percentage: 80,
-        reason: 'Your creative abilities and artistic interests make you perfect for creative careers.',
-        required_education: ['BFA', 'MFA', 'Design Courses', 'Media Studies'],
-        skills: ['Creativity', 'Design Skills', 'Communication', 'Visual Thinking'],
-        salary_range: '₹3-12 LPA',
-        growth_prospects: 'Good opportunities in digital media',
-        icon: Palette
-      });
-    }
-    
-    if (topInterests.includes('education_teaching')) {
-      recommendations.push({
-        title: 'Teacher',
-        description: 'Educate and mentor students in various subjects and life skills.',
-        match_percentage: 85,
-        reason: 'Your passion for learning and helping others makes you ideal for education.',
-        required_education: ['B.Ed', 'M.Ed', 'Subject-specific degrees'],
-        skills: ['Communication', 'Patience', 'Subject Knowledge', 'Mentoring'],
-        salary_range: '₹3-10 LPA',
-        growth_prospects: 'Stable career with good job security',
-        icon: GraduationCap
-      });
-    }
-
-    // Add default recommendation if none match
-    if (recommendations.length === 0) {
-      recommendations.push({
-        title: 'Career Explorer',
-        description: 'Explore different career fields to find your passion and interests.',
-        match_percentage: 75,
-        reason: 'Your diverse interests suggest you would benefit from career exploration.',
-        required_education: ['Bachelor\'s Degree', 'Various Specializations'],
-        skills: ['Communication', 'Problem Solving', 'Adaptability', 'Learning'],
-        salary_range: '₹3-8 LPA',
-        growth_prospects: 'Good potential with experience and specialization',
-        icon: Briefcase
-      });
-    }
-
-    return {
-      summary: `Based on your quiz responses, you show interest in ${topInterests.length > 0 ? topInterests.join(', ') : 'various fields'}. Your top recommendation is ${recommendations[0]?.title}, which aligns well with your interests and skills.`,
-      strengths: ['Problem Solving', 'Communication', 'Adaptability'],
-      work_style: 'You prefer collaborative work environments with opportunities for growth and learning.',
-      career_recommendations: recommendations.slice(0, 5)
-    };
-  };
-
   const handleRestart = () => {
     setCurrentQuestion(0);
     setAnswers({});
-    setIsCompleted(false);
     setAnalysis(null);
     setError(null);
   };
 
-  const handleLanguageChange = (newLanguage: string) => {
-    setLanguage(newLanguage);
-    handleRestart();
-  };
-
-  if (isCompleted && analysis) {
+  if (analysis) {
     return (
       <div className="min-h-screen bg-gradient-primary">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              {isOffline ? <WifiOff className="h-6 w-6 text-orange-500" /> : <Wifi className="h-6 w-6 text-green-500" />}
-              <h1 className="text-3xl font-bold text-foreground">
-                {isOffline ? 'Offline Analysis Complete!' : 'Quiz Analysis Complete!'}
-              </h1>
-            </div>
-            <p className="text-muted-foreground">
-              {isOffline 
-                ? 'Results generated using offline recommendation engine' 
-                : 'AI-powered analysis of your career interests'
-              }
-            </p>
+            <CheckCircle className="h-16 w-16 text-accent mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-foreground mb-2">Quiz Complete!</h1>
+            <p className="text-muted-foreground">Here are your personalized career recommendations</p>
           </div>
 
-          {/* Analysis Results */}
-          <div className="space-y-8">
-            {/* Summary */}
-            <Card className="card-gradient border-border p-6">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Summary</h2>
-              <p className="text-muted-foreground">{analysis.summary}</p>
-            </Card>
-
-            {/* Strengths */}
-            <Card className="card-gradient border-border p-6">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Your Strengths</h2>
-              <div className="flex flex-wrap gap-2">
-                {analysis.strengths.map((strength, index) => (
-                  <span key={index} className="px-3 py-1 bg-accent/20 text-accent rounded-full text-sm">
-                    {strength}
-                  </span>
-                ))}
+          {/* Analysis Summary */}
+          <Card className="card-gradient border-border p-6 mb-8">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Your Career Profile</h2>
+            <p className="text-muted-foreground mb-4">{analysis.summary}</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Key Strengths</h3>
+                <ul className="space-y-1">
+                  {analysis.strengths.map((strength, index) => (
+                    <li key={index} className="text-sm text-muted-foreground flex items-center">
+                      <div className="w-2 h-2 bg-accent rounded-full mr-2"></div>
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </Card>
-
-            {/* Work Style */}
-            <Card className="card-gradient border-border p-6">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Work Style</h2>
-              <p className="text-muted-foreground">{analysis.work_style}</p>
-            </Card>
-
-            {/* Career Recommendations */}
-            <Card className="card-gradient border-border p-6">
-              <h2 className="text-xl font-semibold text-foreground mb-6">Career Recommendations</h2>
-              <div className="space-y-6">
-                {analysis.career_recommendations.map((rec, index) => {
-                  const IconComponent = rec.icon || Briefcase;
-                  return (
-                    <div key={index} className="p-4 bg-secondary/20 rounded-lg">
-                      <div className="flex items-start space-x-4">
-                        <div className="p-2 bg-accent/10 rounded-lg">
-                          <IconComponent className="h-6 w-6 text-accent" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-semibold text-foreground">{rec.title}</h3>
-                            <span className="px-2 py-1 bg-accent/20 text-accent rounded-full text-sm">
-                              {rec.match_percentage}% match
-                            </span>
-                          </div>
-                          <p className="text-muted-foreground mb-3">{rec.description}</p>
-                          <p className="text-sm text-foreground mb-3">{rec.reason}</p>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <h4 className="font-medium text-foreground mb-1">Required Education:</h4>
-                              <p className="text-muted-foreground">{rec.required_education.join(', ')}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-foreground mb-1">Key Skills:</h4>
-                              <p className="text-muted-foreground">{rec.skills.join(', ')}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-foreground mb-1">Salary Range:</h4>
-                              <p className="text-muted-foreground">{rec.salary_range}</p>
-                  </div>
-                            <div>
-                              <h4 className="font-medium text-foreground mb-1">Growth Prospects:</h4>
-                              <p className="text-muted-foreground">{rec.growth_prospects}</p>
-                </div>
-                  </div>
-                </div>
-                  </div>
-                </div>
-                  );
-                })}
-              </div>
-            </Card>
-
-            {/* Actions */}
-            <div className="flex justify-center space-x-4">
-              <Button onClick={handleRestart} variant="outline">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Take Quiz Again
-                    </Button>
-              <Button onClick={() => window.location.href = '/recommendations'}>
-                View All Recommendations
-                </Button>
+              <div>
+                <h3 className="font-semibold text-foreground mb-2">Work Style</h3>
+                <p className="text-sm text-muted-foreground">{analysis.work_style}</p>
               </div>
             </div>
+          </Card>
+
+          {/* Career Recommendations */}
+          <div className="space-y-6 mb-8">
+            <h2 className="text-2xl font-bold text-foreground">Career Recommendations</h2>
+            {analysis.career_recommendations.map((career, index) => {
+              const IconComponent = career.icon || Briefcase;
+              return (
+                <Card key={index} className="card-gradient border-border p-6">
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 bg-accent/10 rounded-lg">
+                      <IconComponent className="h-6 w-6 text-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold text-foreground">{career.title}</h3>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-accent">{career.match_percentage}%</div>
+                          <div className="text-xs text-muted-foreground">Match</div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-muted-foreground mb-3">{career.description}</p>
+                      <p className="text-sm text-accent mb-4">{career.reason}</p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Education Required</h4>
+                          <ul className="space-y-1">
+                            {career.required_education.slice(0, 3).map((edu, idx) => (
+                              <li key={idx} className="text-muted-foreground">• {edu}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Key Skills</h4>
+                          <ul className="space-y-1">
+                            {career.skills.slice(0, 3).map((skill, idx) => (
+                              <li key={idx} className="text-muted-foreground">• {skill}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground mb-1">Salary Range</h4>
+                          <p className="text-muted-foreground font-medium">{career.salary_range}</p>
+                          <h4 className="font-semibold text-foreground mb-1 mt-2">Growth</h4>
+                          <p className="text-muted-foreground text-xs">{career.growth_prospects}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-center space-x-4">
+            <Button onClick={handleRestart} variant="outline">
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Retake Quiz
+            </Button>
+            <Button onClick={() => window.location.href = '/recommendations'} className="bg-accent hover:bg-accent/90">
+              View All Recommendations
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Ensure we always have questions
-  if (questions.length === 0) {
+  if (!questions || questions.length === 0) {
     console.log('No questions found, using fallback');
     setQuestions(FALLBACK_QUESTIONS);
   }
@@ -683,14 +492,15 @@ const Quiz = () => {
           </p>
           
           {/* Language Selector */}
-          <div className="flex justify-center space-x-2">
+          <div className="flex justify-center space-x-2 mb-6">
             {LANGUAGE_OPTIONS.map((lang) => (
               <Button
                 key={lang.code}
-                variant={language === lang.code ? 'default' : 'outline'}
+                variant={language === lang.code ? "default" : "outline"}
                 size="sm"
-                onClick={() => handleLanguageChange(lang.code)}
+                onClick={() => setLanguage(lang.code)}
               >
+                <Globe className="h-4 w-4 mr-1" />
                 {lang.name}
               </Button>
             ))}
@@ -702,9 +512,9 @@ const Quiz = () => {
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span>Question {currentQuestion + 1} of {questions.length}</span>
             <span>{Math.round(progress)}% Complete</span>
-              </div>
+          </div>
           <Progress value={progress} className="h-2" />
-                </div>
+        </div>
 
         {/* Question */}
         <Card className="card-gradient border-border p-8">
@@ -712,26 +522,26 @@ const Quiz = () => {
             <Brain className="h-12 w-12 text-accent mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-foreground mb-2">
               {questions[currentQuestion]?.question}
-                </h2>
+            </h2>
             <p className="text-sm text-muted-foreground">
               Category: {questions[currentQuestion]?.category.replace('_', ' ')}
             </p>
-            </div>
+          </div>
 
-            <RadioGroup 
+          <RadioGroup 
             value={answers[questions[currentQuestion]?.id] || ''}
-              onValueChange={handleAnswerSelect}
+            onValueChange={handleAnswerSelect}
             className="space-y-4"
           >
             {questions[currentQuestion]?.options.map((option, index) => (
               <div key={index} className="flex items-center space-x-2">
                 <RadioGroupItem value={option} id={`option-${index}`} />
                 <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
 
           {error && (
             <Alert className="mt-6">
@@ -741,16 +551,16 @@ const Quiz = () => {
           )}
 
           <div className="flex justify-between mt-8">
-          <Button 
-            variant="outline" 
+            <Button 
+              variant="outline" 
               onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
-            disabled={currentQuestion === 0}
-          >
+              disabled={currentQuestion === 0}
+            >
               Previous
-          </Button>
+            </Button>
 
-          <Button 
-            onClick={handleNext}
+            <Button 
+              onClick={handleNext}
               disabled={!answers[questions[currentQuestion]?.id]}
               className="bg-accent hover:bg-accent/90"
             >
@@ -767,8 +577,8 @@ const Quiz = () => {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </>
               )}
-          </Button>
-        </div>
+            </Button>
+          </div>
         </Card>
       </div>
     </div>

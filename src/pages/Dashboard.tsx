@@ -79,20 +79,12 @@ const Dashboard = () => {
         // Fetch recommendations count
         const { data: recommendationsData } = await supabase
           .from('recommendations')
-          .select('id, created_at')
+          .select('id, generated_at')
           .eq('user_id', user.id);
 
-        // Fetch colleges viewed (if you have a colleges_viewed table)
-        const { data: collegesData } = await supabase
-          .from('colleges_viewed')
-          .select('id')
-          .eq('user_id', user.id);
-
-        // Fetch applications (if you have an applications table)
-        const { data: applicationsData } = await supabase
-          .from('applications')
-          .select('id')
-          .eq('user_id', user.id);
+        // Use placeholder data for colleges viewed and applications
+        const collegesData = null; // Will show 0 until we implement college viewing tracking
+        const applicationsData = null; // Will show 0 until we implement application tracking
 
         setStats({
           profileComplete,
@@ -116,8 +108,8 @@ const Dashboard = () => {
         }
         
         if (recommendationsData?.length > 0) {
-          const latestRec = recommendationsData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-          const timeAgo = getTimeAgo(new Date(latestRec.created_at));
+          const latestRec = recommendationsData.sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime())[0];
+          const timeAgo = getTimeAgo(new Date(latestRec.generated_at));
           activity.push({
             id: 'rec-1',
             action: 'Received Career Recommendations',
