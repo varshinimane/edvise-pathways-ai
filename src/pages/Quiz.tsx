@@ -212,6 +212,31 @@ const LANGUAGE_OPTIONS = [
   { code: 'hi', name: 'हिंदी' }
 ];
 
+// Only stream quiz questions
+const STREAM_QUESTIONS = [
+  {
+    id: 'stream_1',
+    question: 'Which subjects do you enjoy the most?',
+    options: ['Physics, Chemistry, Math', 'Biology', 'Economics, Business Studies', 'History, Political Science', 'Fine Arts, Design'],
+    category: 'preferred_subjects',
+    language: 'en'
+  },
+  {
+    id: 'stream_2',
+    question: 'What type of activities do you prefer?',
+    options: ['Experiments & Labs', 'Reading & Research', 'Business Simulations', 'Debates & Discussions', 'Art & Creativity'],
+    category: 'activity_preference',
+    language: 'en'
+  },
+  {
+    id: 'stream_3',
+    question: 'Which stream are you most interested in?',
+    options: ['Science', 'Commerce', 'Arts/Humanities', 'Vocational', 'Undecided'],
+    category: 'stream_interest',
+    language: 'en'
+  }
+];
+
 const Quiz = () => {
   const [questions, setQuestions] = useState<QuizQuestion[]>(FALLBACK_QUESTIONS);
   const [currentQuestion, setCurrentQuestion] = useState(0);

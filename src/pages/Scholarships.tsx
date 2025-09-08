@@ -177,38 +177,30 @@ const Scholarships = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="card-gradient border-border p-4">
-            <div className="flex items-center space-x-3">
-              <Award className="h-6 w-6 text-primary" />
-              <div>
-                <p className="text-lg font-bold">{filteredScholarships.length}</p>
-                <p className="text-sm text-muted-foreground">Available Scholarships</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="card-gradient border-border p-4">
-            <div className="flex items-center space-x-3">
-              <DollarSign className="h-6 w-6 text-accent" />
-              <div>
-                <p className="text-lg font-bold">₹2.5Cr+</p>
-                <p className="text-sm text-muted-foreground">Total Fund Pool</p>
-              </div>
-            </div>
-          </Card>
-          
-          <Card className="card-gradient border-border p-4">
-            <div className="flex items-center space-x-3">
-              <Users className="h-6 w-6 text-secondary-foreground" />
-              <div>
-                <p className="text-lg font-bold">64K+</p>
-                <p className="text-sm text-muted-foreground">Applications Received</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+  <Card className="card-gradient border-border p-4">
+    <div className="flex items-center space-x-3">
+      <Award className="h-6 w-6 text-primary" />
+      <div>
+        <p className="text-lg font-bold">{filteredScholarships.length}</p>
+        <p className="text-sm text-muted-foreground">Available Scholarships</p>
+      </div>
+    </div>
+  </Card>
+  
+  <Card className="card-gradient border-border p-4">
+    <div className="flex items-center space-x-3">
+      <DollarSign className="h-6 w-6 text-accent" />
+      <div>
+        <p className="text-lg font-bold">₹2.5Cr+</p>
+        <p className="text-sm text-muted-foreground">Total Fund Pool</p>
+      </div>
+    </div>
+  </Card>
+</div>
 
+          
+          
         {/* Scholarships List */}
         <div className="space-y-6">
           {filteredScholarships.map((scholarship) => (
@@ -245,32 +237,11 @@ const Scholarships = () => {
                         <DollarSign className="h-4 w-4 text-accent" />
                         <span className="font-medium">{scholarship.amount}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className={`h-4 w-4 ${getUrgencyColor(scholarship.deadline)}`} />
-                        <span className={getUrgencyColor(scholarship.deadline)}>
-                          {formatDeadline(scholarship.deadline)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          {scholarship.applicants.toLocaleString()} applicants
-                        </span>
-                      </div>
+                      
                     </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:ml-6">
-                    <Button 
-                      variant="accent"
-                      size="sm"
-                    >
-                      Apply Now
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
                   </div>
                 </div>
               </div>

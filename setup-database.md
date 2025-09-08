@@ -42,3 +42,5 @@ If you see "No Recommendations Yet" after taking the quiz:
 - Verify the database tables were created successfully
 - Ensure your Supabase connection is working
 - Check that the user is properly authenticated
+
+

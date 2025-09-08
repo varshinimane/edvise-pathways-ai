@@ -295,3 +295,5 @@ ${secondStream.match_percentage > 60 ? `You also show significant interest in ${
 
 Your learning style and preferences indicate you would thrive in environments that match your natural inclinations and provide opportunities for growth in your areas of strength.`;
 }
+
+

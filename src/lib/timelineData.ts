@@ -445,3 +445,5 @@ export function getAllTypes(): string[] {
   const types = TIMELINE_EVENTS.map(event => event.type);
   return [...new Set(types)].sort();
 }
+
+

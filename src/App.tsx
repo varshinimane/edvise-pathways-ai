@@ -8,7 +8,6 @@ import OfflineIndicator from "./components/OfflineIndicator";
 import HomePage from "./pages/HomePage";
 import Dashboard from "./pages/Dashboard";
 import Quiz from "./pages/Quiz";
-import StreamSelectionQuiz from "./pages/StreamSelectionQuiz";
 import CollegesPage from "./pages/CollegesPage";
 import Scholarships from "./pages/Scholarships";
 import Chat from "./pages/Chat";
@@ -85,55 +84,47 @@ const AppContent = () => {
       {user && <Navigation />}
       <OfflineIndicator />
       <main className={user ? "pt-16" : ""}>
-        <Routes>
+      <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/auth" element={<Auth />} />
+        <Route path="/auth" element={<Auth />} />
           <Route 
             path="/dashboard" 
             element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
             } 
           />
           <Route 
             path="/quiz" 
             element={
-              <ProtectedRoute>
-                <Quiz />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/stream-quiz" 
-            element={
-              <ProtectedRoute>
-                <StreamSelectionQuiz />
-              </ProtectedRoute>
+          <ProtectedRoute>
+            <Quiz />
+          </ProtectedRoute>
             } 
           />
           <Route 
             path="/colleges" 
             element={
-              <ProtectedRoute>
-                <CollegesPage />
-              </ProtectedRoute>
+          <ProtectedRoute>
+            <CollegesPage />
+          </ProtectedRoute>
             } 
           />
           <Route 
             path="/scholarships" 
             element={
-              <ProtectedRoute>
-                <Scholarships />
-              </ProtectedRoute>
+          <ProtectedRoute>
+            <Scholarships />
+          </ProtectedRoute>
             } 
           />
           <Route 
             path="/chat" 
             element={
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
+          <ProtectedRoute>
+            <Chat />
+          </ProtectedRoute>
             } 
           />
           <Route 
@@ -155,25 +146,25 @@ const AppContent = () => {
           <Route 
             path="/admin" 
             element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
             } 
           />
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
-        </Routes>
+      </Routes>
       </main>
     </div>
   );
 };
 
 const App = () => (
-  <TooltipProvider>
-    <Toaster />
-    <Sonner />
-    <AppContent />
-  </TooltipProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+          <AppContent />
+    </TooltipProvider>
 );
 
 export default App;

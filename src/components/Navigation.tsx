@@ -27,7 +27,6 @@ const Navigation = () => {
     { name: 'Home', path: '/', icon: Home },
     { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
     { name: 'Career Quiz', path: '/quiz', icon: Brain },
-    { name: 'Stream Quiz', path: '/stream-quiz', icon: Brain },
     { name: 'Recommendations', path: '/recommendations', icon: Brain },
     { name: 'Colleges', path: '/colleges', icon: MapPin },
     { name: 'Scholarships', path: '/scholarships', icon: Award },

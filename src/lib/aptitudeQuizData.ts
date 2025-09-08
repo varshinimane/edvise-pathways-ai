@@ -337,3 +337,5 @@ export const STREAM_ANALYSIS = {
     higher_education: ['ITI', 'Diploma', 'Certificate Courses', 'Skill Development Programs']
   }
 };
+
+

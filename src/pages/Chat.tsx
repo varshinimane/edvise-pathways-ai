@@ -203,38 +203,29 @@ const Chat = () => {
           </div>
 
           {/* Quick Questions Sidebar */}
-          <div className="space-y-6">
-            <Card className="card-gradient border-border">
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Quick Questions</h3>
-                <div className="space-y-3">
-                  {quickQuestions.map((item, index) => (
-                    <Button
-                      key={index}
-                      variant="ghost"
-                      className="w-full justify-start text-left p-3 h-auto hover:bg-secondary/30"
-                      onClick={() => handleQuickQuestion(item.question)}
-                    >
-                      <item.icon className="h-4 w-4 mr-3 text-primary flex-shrink-0" />
-                      <span className="text-sm">{item.question}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </Card>
+<div className="space-y-6">
+  <Card className="card-gradient border-border w-full max-w-xl">
+    <div className="p-4">
+      <h3 className="text-lg font-semibold text-foreground mb-4">Quick Questions</h3>
+      <div className="space-y-3">
+        {quickQuestions.map((item, index) => (
+          <Button
+            key={index}
+            variant="ghost"
+            className="w-full justify-start text-left p-3 h-auto hover:bg-secondary/30"
+            onClick={() => handleQuickQuestion(item.question)}
+          >
+            <item.icon className="h-4 w-4 mr-3 text-primary flex-shrink-0" />
+            <span className="text-sm break-words whitespace-normal">
+              {item.question}
+            </span>
+          </Button>
+        ))}
+      </div>
+    </div>
+  </Card>
+</div>
 
-            <Card className="card-gradient border-border">
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Need Backend Features?</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  To enable AI-powered recommendations, user authentication, and data storage, connect your project to Supabase.
-                </p>
-                <Button variant="outline" size="sm" className="w-full">
-                  Connect Supabase
-                </Button>
-              </div>
-            </Card>
-          </div>
         </div>
       </div>
     </div>

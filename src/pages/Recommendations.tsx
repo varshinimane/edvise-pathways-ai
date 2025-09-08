@@ -49,17 +49,17 @@ const Recommendations = () => {
       if (user) {
         try {
           const { data, error } = await supabase
-            .from('recommendations')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('generated_at', { ascending: false })
-            .limit(1);
+        .from('recommendations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('generated_at', { ascending: false })
+        .limit(1);
 
           if (error) {
             console.error('Error loading recommendations from Supabase:', error);
           } else if (data && data.length > 0) {
             console.log('Loading recommendations from Supabase');
-            setRecommendations(data[0]);
+        setRecommendations(data[0]);
           }
         } catch (supabaseError) {
           console.error('Supabase error:', supabaseError);
@@ -177,23 +177,23 @@ const Recommendations = () => {
 
             {/* Course Recommendations */}
             {recommendations.course_recommendations && (
-              <Card className="card-gradient border-border">
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center">
-                    <BookOpen className="h-5 w-5 mr-2 text-accent" />
-                    Recommended Courses
-                  </h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="card-gradient border-border">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2 text-accent" />
+                  Recommended Courses
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {recommendations.course_recommendations.courses?.map((course: string, index: number) => (
-                      <div key={index} className="p-4 bg-secondary/20 rounded-lg border border-border/50">
+                    <div key={index} className="p-4 bg-secondary/20 rounded-lg border border-border/50">
                         <h4 className="font-medium text-foreground mb-2">{course}</h4>
                         <p className="text-sm text-muted-foreground">Recommended for your career path</p>
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              </Card>
+              </div>
+            </Card>
             )}
           </div>
 
