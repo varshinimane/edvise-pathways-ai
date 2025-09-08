@@ -33,10 +33,32 @@ CREATE TABLE IF NOT EXISTS applications (
   applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create quiz_responses table to store user quiz answers
+CREATE TABLE IF NOT EXISTS quiz_responses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  responses JSONB NOT NULL, -- Store quiz answers as JSON
+  language TEXT DEFAULT 'en',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create recommendations table to store AI-generated recommendations
+CREATE TABLE IF NOT EXISTS recommendations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  career_recommendations JSONB NOT NULL, -- Store career recommendations as JSON
+  course_recommendations JSONB, -- Store course recommendations as JSON
+  college_recommendations JSONB, -- Store college recommendations as JSON
+  scholarship_matches JSONB, -- Store scholarship matches as JSON
+  generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE colleges_viewed ENABLE ROW LEVEL SECURITY;
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quiz_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recommendations ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for profiles table
 CREATE POLICY "Users can view their own profile" ON profiles
@@ -65,10 +87,26 @@ CREATE POLICY "Users can insert their own applications" ON applications
 CREATE POLICY "Users can update their own applications" ON applications
   FOR UPDATE USING (auth.uid() = user_id);
 
+-- Create RLS policies for quiz_responses table
+CREATE POLICY "Users can view their own quiz responses" ON quiz_responses
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own quiz responses" ON quiz_responses
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Create RLS policies for recommendations table
+CREATE POLICY "Users can view their own recommendations" ON recommendations
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own recommendations" ON recommendations
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_colleges_viewed_user_id ON colleges_viewed(user_id);
 CREATE INDEX IF NOT EXISTS idx_applications_user_id ON applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_responses_user_id ON quiz_responses(user_id);
+CREATE INDEX IF NOT EXISTS idx_recommendations_user_id ON recommendations(user_id);
 
 -- Create function to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

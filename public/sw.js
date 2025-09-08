@@ -1,21 +1,22 @@
 // public/sw.js - Service Worker for PWA
-const CACHE_NAME = 'edvise-v1';
-const STATIC_CACHE = 'edvise-static-v1';
-const DATA_CACHE = 'edvise-data-v1';
+const CACHE_NAME = 'edvise-v2';
+const STATIC_CACHE = 'edvise-static-v2';
+const DATA_CACHE = 'edvise-data-v2';
+const OFFLINE_CACHE = 'edvise-offline-v2';
 
-// Static assets to cache
+// Static assets to cache (Vite-specific paths)
 const STATIC_ASSETS = [
   '/',
-  '/dashboard',
-  '/quiz',
-  '/recommendations',
-  '/colleges',
-  '/scholarships',
-  '/profile',
-  '/auth',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json'
+  '/index.html',
+  '/manifest.json',
+  '/favicon.ico'
+];
+
+// Dynamic assets to cache
+const DYNAMIC_ASSETS = [
+  '/src/main.tsx',
+  '/src/App.tsx',
+  '/src/index.css'
 ];
 
 // API endpoints to cache
@@ -62,8 +63,13 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Handle API requests
-  if (url.pathname.startsWith('/api/')) {
+  // Skip non-GET requests
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // Handle Supabase API requests
+  if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {
     event.respondWith(
       caches.open(DATA_CACHE)
         .then((cache) => {
@@ -88,7 +94,8 @@ self.addEventListener('fetch', (event) => {
                   return new Response(
                     JSON.stringify({ 
                       error: 'Offline', 
-                      message: 'No internet connection. Using cached data.' 
+                      message: 'No internet connection. Using cached data.',
+                      offline: true
                     }),
                     { 
                       status: 200,
@@ -96,6 +103,41 @@ self.addEventListener('fetch', (event) => {
                     }
                   );
                 });
+            });
+        })
+    );
+    return;
+  }
+
+  // Handle Vite dev server requests
+  if (url.hostname === 'localhost' && url.port === '8081') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache successful responses
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE)
+              .then((cache) => {
+                cache.put(request, responseClone);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Try to serve from cache
+          return caches.match(request)
+            .then((cachedResponse) => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              
+              // Return offline page for navigation requests
+              if (request.mode === 'navigate') {
+                return caches.match('/index.html');
+              }
+              
+              return new Response('Offline', { status: 503 });
             });
         })
     );
@@ -124,7 +166,7 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {
             // Return offline page for navigation requests
             if (request.mode === 'navigate') {
-              return caches.match('/');
+              return caches.match('/index.html');
             }
             return new Response('Offline', { status: 503 });
           });

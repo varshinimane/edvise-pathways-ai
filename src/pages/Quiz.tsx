@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { generateOfflineRecommendations } from '@/lib/offlineRecommendationEngine';
+import { offlineStorage } from '@/lib/offlineStorage';
 
 interface QuizQuestion {
   id: string;
@@ -269,11 +270,6 @@ const Quiz = () => {
   };
 
   const analyzeQuizResponses = async () => {
-    if (!user) {
-      setError('User not authenticated');
-      return;
-    }
-
     setIsAnalyzing(true);
     setError(null);
 
@@ -290,31 +286,51 @@ const Quiz = () => {
       const analysisData = generateOfflineRecommendations(quizData);
       console.log('Rule-based analysis completed:', analysisData);
 
-      // Save to database
-      const { error: quizError } = await supabase
-        .from('quiz_responses')
-        .insert({
-          user_id: user.id,
-          responses: quizData
-        });
+      // Store data offline first (always works)
+      const offlineData = {
+        quiz_responses: quizData,
+        recommendations: analysisData,
+        timestamp: Date.now(),
+        user_id: user?.id || 'anonymous'
+      };
 
-      if (quizError) {
-        console.error('Error saving quiz responses:', quizError);
-      }
+      await offlineStorage.saveUserData('latest_quiz_results', offlineData);
+      console.log('Quiz data saved offline');
 
-      // Save recommendations
-      const { error: recError } = await supabase
-        .from('recommendations')
-        .insert({
-          user_id: user.id,
-          career_recommendations: analysisData.career_recommendations as any,
-          course_recommendations: { courses: analysisData.course_recommendations || [] } as any,
-          college_recommendations: [],
-          scholarship_matches: []
-        });
+      // Try to save to Supabase if online and user is authenticated
+      if (user && !isOffline) {
+        try {
+          // Save to database
+          const { error: quizError } = await supabase
+            .from('quiz_responses')
+            .insert({
+              user_id: user.id,
+              responses: quizData
+            });
 
-      if (recError) {
-        console.error('Error saving recommendations:', recError);
+          if (quizError) {
+            console.error('Error saving quiz responses:', quizError);
+          }
+
+          // Save recommendations
+          const { error: recError } = await supabase
+            .from('recommendations')
+            .insert({
+              user_id: user.id,
+              career_recommendations: analysisData.career_recommendations as any,
+              course_recommendations: { courses: analysisData.course_recommendations || [] } as any,
+              college_recommendations: [],
+              scholarship_matches: []
+            });
+
+          if (recError) {
+            console.error('Error saving recommendations:', recError);
+          }
+
+          console.log('Quiz data synced to cloud');
+        } catch (cloudError) {
+          console.error('Cloud sync failed, but data saved offline:', cloudError);
+        }
       }
 
       // Map icons to recommendations
@@ -348,14 +364,7 @@ const Quiz = () => {
 
     } catch (error) {
       console.error('Error analyzing quiz:', error);
-      // Fallback to offline analysis
-      const quizData = questions.map(q => ({
-        questionId: q.id,
-        answer: answers[q.id] || 'No answer',
-        category: q.category
-      }));
-      const fallbackAnalysis = generateOfflineRecommendations(quizData);
-      setAnalysis(fallbackAnalysis);
+      setError('Failed to analyze quiz. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }

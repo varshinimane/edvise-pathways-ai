@@ -24,47 +24,32 @@ if ('serviceWorker' in navigator) {
 }
 
 function AppWithProviders() {
-  const { isInitialized, isLoading, error } = useOfflineData();
+  const { isInitialized } = useOfflineData();
 
-  if (isLoading) {
+  if (!isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading EdVise...</p>
+          <p className="text-muted-foreground">Initializing offline data...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">Error initializing app: {error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return <App />;
+  return (
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
+  );
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AppWithProviders />
-          <Toaster />
-        </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
-  </StrictMode>
+    <AppWithProviders />
+  </StrictMode>,
 )
