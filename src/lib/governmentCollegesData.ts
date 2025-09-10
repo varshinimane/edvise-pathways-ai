@@ -147,7 +147,7 @@ export const GOVERNMENT_COLLEGES: GovernmentCollege[] = [
     },
     admission: {
       entrance_exams: ['JEE Advanced'],
-      cut_off_percentiles: {
+    cut_off_percentages: {
         'General': 95,
         'OBC': 90,
         'SC': 85,
@@ -267,7 +267,7 @@ export const GOVERNMENT_COLLEGES: GovernmentCollege[] = [
     },
     admission: {
       entrance_exams: ['DUET'],
-      cut_off_percentiles: {
+    cut_off_percentages: {
         'General': 88,
         'OBC': 83,
         'SC': 78,
@@ -355,7 +355,7 @@ export const GOVERNMENT_COLLEGES: GovernmentCollege[] = [
     },
     admission: {
       entrance_exams: ['JEE Main'],
-      cut_off_percentiles: {
+      cut_off_percentages: {
         'General': 90,
         'OBC': 85,
         'SC': 80,

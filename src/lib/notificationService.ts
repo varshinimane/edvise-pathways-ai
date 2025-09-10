@@ -86,8 +86,7 @@ class NotificationService {
         tag: data.tag,
         data: data.data,
         requireInteraction: data.requireInteraction || false,
-        silent: data.silent || false,
-        timestamp: data.timestamp || Date.now()
+        silent: data.silent || false
       });
 
       // Auto-close after 5 seconds unless requireInteraction is true
@@ -251,7 +250,15 @@ class NotificationService {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      await registration.sync.register(tag);
+      // Background sync for notifications (if supported)
+      try {
+        const syncManager = (registration as any).sync;
+        if (syncManager && typeof syncManager.register === 'function') {
+          await syncManager.register(tag);
+        }
+      } catch (syncError) {
+        console.warn('Background sync not supported or failed:', syncError);
+      }
       
       // Store data for background sync
       await this.storeSyncData(tag, data);

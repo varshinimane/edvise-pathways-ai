@@ -8,8 +8,8 @@ interface College {
   lat: number;
   lng: number;
   type: string;
-  rating: number;
-  programs: string[];
+  rating?: number;
+  programs?: string[];
   phone?: string;
   email?: string;
   website?: string;
