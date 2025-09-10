@@ -12,7 +12,8 @@ import {
   LogOut,
   Settings,
   Home,
-  BarChart3
+  BarChart3,
+  BookOpen
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +31,7 @@ const Navigation = () => {
     { name: 'Recommendations', path: '/recommendations', icon: Brain },
     { name: 'Colleges', path: '/colleges', icon: MapPin },
     { name: 'Scholarships', path: '/scholarships', icon: Award },
+    { name: 'Study Materials', path: '/study-materials', icon: BookOpen },
     { name: 'Chat', path: '/chat', icon: MessageCircle }
   ];
 

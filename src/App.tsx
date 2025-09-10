@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Quiz from "./pages/Quiz";
 import CollegesPage from "./pages/CollegesPage";
 import Scholarships from "./pages/Scholarships";
+import StudyMaterials from "./pages/StudyMaterials";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -116,6 +117,14 @@ const AppContent = () => {
             element={
           <ProtectedRoute>
             <Scholarships />
+          </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/study-materials" 
+            element={
+          <ProtectedRoute>
+            <StudyMaterials />
           </ProtectedRoute>
             } 
           />
