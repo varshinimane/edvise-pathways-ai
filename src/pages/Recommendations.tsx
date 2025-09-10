@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
-  TrendingUp, 
   BookOpen, 
   Target, 
   Star,
@@ -19,6 +18,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { offlineStorage } from '@/lib/offlineStorage';
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const Recommendations = () => {
   const [recommendations, setRecommendations] = useState<any>(null);
@@ -31,10 +32,8 @@ const Recommendations = () => {
 
   const loadRecommendations = async () => {
     try {
-      // First, try to load from offline storage (always available)
       const offlineData = await offlineStorage.getUserData('latest_quiz_results');
       if (offlineData && offlineData.recommendations) {
-        console.log('Loading recommendations from offline storage');
         setRecommendations({
           career_recommendations: offlineData.recommendations.career_recommendations,
           course_recommendations: { courses: offlineData.recommendations.course_recommendations || [] },
@@ -45,30 +44,53 @@ const Recommendations = () => {
         return;
       }
 
-      // If no offline data and user is authenticated, try Supabase
       if (user) {
-        try {
-          const { data, error } = await supabase
-        .from('recommendations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('generated_at', { ascending: false })
-        .limit(1);
+        const { data, error } = await supabase
+          .from('recommendations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('generated_at', { ascending: false })
+          .limit(1);
 
-          if (error) {
-            console.error('Error loading recommendations from Supabase:', error);
-          } else if (data && data.length > 0) {
-            console.log('Loading recommendations from Supabase');
-        setRecommendations(data[0]);
-          }
-        } catch (supabaseError) {
-          console.error('Supabase error:', supabaseError);
+        if (!error && data && data.length > 0) {
+          setRecommendations(data[0]);
         }
       }
     } catch (error) {
       console.error('Error loading recommendations:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ✅ Export with jsPDF + html2canvas
+  const exportPDF = async () => {
+    const element = document.getElementById("recommendations-content");
+    if (element) {
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("career-recommendations.pdf");
+    }
+  };
+
+  // ✅ Web Share API
+  const shareRecommendations = async () => {
+    if (navigator.share) {
+      await navigator.share({
+        title: "My Career Recommendations",
+        text: "Check out my AI-powered career recommendations from EdVise!",
+        url: window.location.href,
+      });
+    } else {
+      // Fallback: copy link
+      navigator.clipboard.writeText(window.location.href);
+      alert("Link copied to clipboard!");
     }
   };
 
@@ -107,7 +129,7 @@ const Recommendations = () => {
 
   return (
     <div className="min-h-screen bg-gradient-primary">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="recommendations-content">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -118,18 +140,17 @@ const Recommendations = () => {
               </p>
             </div>
             <div className="flex space-x-3">
-              <Button variant="outline">
+              <Button variant="outline" onClick={exportPDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
-              <Button variant="accent">
+              <Button variant="accent" onClick={shareRecommendations}>
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
             </div>
           </div>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
