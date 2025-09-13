@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { User, MapPin, Phone, CheckCircle, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { User, MapPin, Phone, CheckCircle, AlertCircle, GraduationCap, Heart, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,7 +20,15 @@ const ProfileSettings = () => {
   const [formData, setFormData] = useState({
     full_name: '',
     location: '',
-    phone: ''
+    phone: '',
+    age: '',
+    gender: '',
+    class_level: '',
+    academic_interests: [] as string[],
+    preferred_subjects: [] as string[],
+    career_goals: [] as string[],
+    learning_style: '',
+    stream: ''
   });
 
   // Fetch profile data from Supabase
@@ -47,14 +57,30 @@ const ProfileSettings = () => {
           setFormData({
             full_name: profileData.full_name || '',
             location: profileData.location || '',
-            phone: profileData.phone || ''
+            phone: profileData.phone || '',
+            age: profileData.age?.toString() || '',
+            gender: profileData.gender || '',
+            class_level: profileData.class_level || '',
+            academic_interests: profileData.academic_interests || [],
+            preferred_subjects: profileData.preferred_subjects || [],
+            career_goals: profileData.career_goals || [],
+            learning_style: profileData.learning_style || '',
+            stream: profileData.stream || ''
           });
         } else {
           // Initialize with user metadata if no profile exists
           setFormData({
             full_name: user.user_metadata?.full_name || '',
             location: '',
-            phone: ''
+            phone: '',
+            age: '',
+            gender: '',
+            class_level: '',
+            academic_interests: [],
+            preferred_subjects: [],
+            career_goals: [],
+            learning_style: '',
+            stream: ''
           });
         }
       } catch (error) {
@@ -63,7 +89,15 @@ const ProfileSettings = () => {
         setFormData({
           full_name: user.user_metadata?.full_name || '',
           location: '',
-          phone: ''
+          phone: '',
+          age: '',
+          gender: '',
+          class_level: '',
+          academic_interests: [],
+          preferred_subjects: [],
+          career_goals: [],
+          learning_style: '',
+          stream: ''
         });
       } finally {
         setLoading(false);
@@ -73,8 +107,19 @@ const ProfileSettings = () => {
     fetchProfile();
   }, [user]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleMultiSelectChange = (field: string, value: string, checked: boolean) => {
+    setFormData(prev => {
+      const currentValues = prev[field as keyof typeof prev] as string[];
+      if (checked) {
+        return { ...prev, [field]: [...currentValues, value] };
+      } else {
+        return { ...prev, [field]: currentValues.filter(item => item !== value) };
+      }
+    });
   };
 
   const handleSave = async () => {
@@ -92,6 +137,14 @@ const ProfileSettings = () => {
           full_name: formData.full_name,
           location: formData.location,
           phone: formData.phone,
+          age: formData.age ? parseInt(formData.age) : null,
+          gender: formData.gender || null,
+          class_level: formData.class_level || null,
+          academic_interests: formData.academic_interests,
+          preferred_subjects: formData.preferred_subjects,
+          career_goals: formData.career_goals,
+          learning_style: formData.learning_style || null,
+          stream: formData.stream || null,
           role: 'student', // Default role
           updated_at: new Date().toISOString()
         });
@@ -111,9 +164,26 @@ const ProfileSettings = () => {
   };
 
   const calculateProfileCompletion = () => {
-    const fields = [formData.full_name, formData.location, formData.phone];
-    const completedFields = fields.filter(field => field && field.trim() !== '').length;
-    return Math.round((completedFields / fields.length) * 100);
+    const fields = [
+      formData.full_name, 
+      formData.location, 
+      formData.phone,
+      formData.age,
+      formData.gender,
+      formData.class_level,
+      formData.learning_style,
+      formData.stream
+    ];
+    const arrayFields = [
+      formData.academic_interests.length > 0,
+      formData.preferred_subjects.length > 0,
+      formData.career_goals.length > 0
+    ];
+    
+    const completedFields = fields.filter(field => field && field.toString().trim() !== '').length;
+    const completedArrayFields = arrayFields.filter(Boolean).length;
+    
+    return Math.round(((completedFields + completedArrayFields) / (fields.length + arrayFields.length)) * 100);
   };
 
   if (loading || !user) {
@@ -158,27 +228,27 @@ const ProfileSettings = () => {
                       <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                     )}
                     <span className={formData.full_name ? 'text-foreground' : 'text-muted-foreground'}>
-                      Full Name
+                      Personal Info
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {formData.location ? (
+                    {formData.academic_interests.length > 0 ? (
                       <CheckCircle className="h-4 w-4 text-accent" />
                     ) : (
                       <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                     )}
-                    <span className={formData.location ? 'text-foreground' : 'text-muted-foreground'}>
-                      Location
+                    <span className={formData.academic_interests.length > 0 ? 'text-foreground' : 'text-muted-foreground'}>
+                      Academic Interests
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {formData.phone ? (
+                    {formData.career_goals.length > 0 ? (
                       <CheckCircle className="h-4 w-4 text-accent" />
                     ) : (
                       <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                     )}
-                    <span className={formData.phone ? 'text-foreground' : 'text-muted-foreground'}>
-                      Phone Number
+                    <span className={formData.career_goals.length > 0 ? 'text-foreground' : 'text-muted-foreground'}>
+                      Career Goals
                     </span>
                   </div>
                 </div>
@@ -187,7 +257,8 @@ const ProfileSettings = () => {
           </div>
 
           {/* Profile Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Personal Information */}
             <Card className="card-gradient border-border p-6">
               <h3 className="text-lg font-semibold text-foreground mb-6">Personal Information</h3>
               
@@ -202,7 +273,7 @@ const ProfileSettings = () => {
                 </Alert>
               )}
 
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="full_name">Full Name</Label>
                   <div className="relative">
@@ -216,6 +287,51 @@ const ProfileSettings = () => {
                       className="pl-10"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    placeholder="Enter your age"
+                    value={formData.age}
+                    onChange={(e) => handleInputChange('age', e.target.value)}
+                    min="13"
+                    max="100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="class_level">Class/Level</Label>
+                  <Select value={formData.class_level} onValueChange={(value) => handleInputChange('class_level', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="class_9">Class 9</SelectItem>
+                      <SelectItem value="class_10">Class 10</SelectItem>
+                      <SelectItem value="class_11">Class 11</SelectItem>
+                      <SelectItem value="class_12">Class 12</SelectItem>
+                      <SelectItem value="graduate">Graduate</SelectItem>
+                      <SelectItem value="post_graduate">Post Graduate</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -247,18 +363,105 @@ const ProfileSettings = () => {
                     />
                   </div>
                 </div>
+              </div>
+            </Card>
 
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSave}
-                    disabled={isUpdating}
-                    className="bg-accent hover:bg-accent/90 text-white"
-                  >
-                    {isUpdating ? 'Saving...' : 'Save Changes'}
-                  </Button>
+            {/* Academic Information */}
+            <Card className="card-gradient border-border p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-6">Academic Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="stream">Stream</Label>
+                  <Select value={formData.stream} onValueChange={(value) => handleInputChange('stream', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stream" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="science">Science</SelectItem>
+                      <SelectItem value="commerce">Commerce</SelectItem>
+                      <SelectItem value="arts">Arts/Humanities</SelectItem>
+                      <SelectItem value="vocational">Vocational</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="learning_style">Learning Style</Label>
+                  <Select value={formData.learning_style} onValueChange={(value) => handleInputChange('learning_style', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select learning style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="visual">Visual Learner</SelectItem>
+                      <SelectItem value="auditory">Auditory Learner</SelectItem>
+                      <SelectItem value="kinesthetic">Kinesthetic Learner</SelectItem>
+                      <SelectItem value="reading_writing">Reading/Writing Learner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label>Academic Interests</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Business Studies', 'Arts', 'Psychology'].map((interest) => (
+                      <div key={interest} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`academic_${interest}`}
+                          checked={formData.academic_interests.includes(interest)}
+                          onCheckedChange={(checked) => handleMultiSelectChange('academic_interests', interest, checked as boolean)}
+                        />
+                        <Label htmlFor={`academic_${interest}`} className="text-sm">{interest}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Preferred Subjects</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {['Science', 'Mathematics', 'Languages', 'Social Studies', 'Arts', 'Technology', 'Sports', 'Music', 'Literature'].map((subject) => (
+                      <div key={subject} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`subject_${subject}`}
+                          checked={formData.preferred_subjects.includes(subject)}
+                          onCheckedChange={(checked) => handleMultiSelectChange('preferred_subjects', subject, checked as boolean)}
+                        />
+                        <Label htmlFor={`subject_${subject}`} className="text-sm">{subject}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Career Goals</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {['Doctor', 'Engineer', 'Teacher', 'Scientist', 'Artist', 'Business', 'Government Service', 'Research', 'Technology', 'Healthcare', 'Education', 'Entertainment'].map((career) => (
+                      <div key={career} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`career_${career}`}
+                          checked={formData.career_goals.includes(career)}
+                          onCheckedChange={(checked) => handleMultiSelectChange('career_goals', career, checked as boolean)}
+                        />
+                        <Label htmlFor={`career_${career}`} className="text-sm">{career}</Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </Card>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="bg-accent hover:bg-accent/90 text-white"
+              >
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -11,12 +11,15 @@ import {
   Target,
   ArrowRight,
   Clock,
-  Star
+  Star,
+  GraduationCap,
+  CheckCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
+import PersonalizedRecommendations from '@/components/PersonalizedRecommendations';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -377,6 +380,13 @@ const Dashboard = () => {
             </Card>
           </div>
         </div>
+
+        {/* Personalized Recommendations */}
+        {user && (
+          <div className="mt-12">
+            <PersonalizedRecommendations />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ import {
   type TimelineEvent 
 } from '@/lib/timelineData';
 import { offlineStorage } from '@/lib/offlineStorage';
+import { supabase } from '@/integrations/supabase/client';
 
 const TimelineTracker = () => {
   const [events, setEvents] = useState<TimelineEvent[]>(TIMELINE_EVENTS);
@@ -105,10 +106,7 @@ const TimelineTracker = () => {
       if (!event) return;
 
       const subscription = {
-        id: `sub_${eventId}_${Date.now()}`,
-        user_id: 'current_user', // This would come from auth context
         event_id: eventId,
-        subscribed_at: new Date().toISOString(),
         notification_preferences: {
           push: true,
           email: true,
@@ -118,16 +116,55 @@ const TimelineTracker = () => {
         status: 'active'
       };
 
+      // Save to offline storage first
       const existingSubscriptions = await offlineStorage.getUserData('timeline_subscriptions') || [];
       const updatedSubscriptions = [...existingSubscriptions, subscription];
-      
       await offlineStorage.saveUserData('timeline_subscriptions', updatedSubscriptions);
+      
+      // Try to save to Supabase if user is authenticated
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { error } = await supabase
+            .from('user_timeline_subscriptions')
+            .insert({
+              user_id: userData.user.id,
+              ...subscription
+            });
+          
+          if (error) {
+            console.error('Error saving to database:', error);
+          }
+        }
+      } catch (dbError) {
+        console.warn('Database save failed, but saved offline:', dbError);
+      }
       
       setSubscribedEvents(prev => new Set([...prev, eventId]));
       
       // Request notification permission
       if ('Notification' in window && Notification.permission === 'default') {
         await Notification.requestPermission();
+      }
+      
+      // Schedule notification reminders
+      if (event.notification_settings.reminder_days) {
+        event.notification_settings.reminder_days.forEach(days => {
+          const reminderDate = new Date(event.dates.start);
+          reminderDate.setDate(reminderDate.getDate() - days);
+          
+          const timeUntilReminder = reminderDate.getTime() - Date.now();
+          if (timeUntilReminder > 0) {
+            setTimeout(() => {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`Reminder: ${event.title}`, {
+                  body: `${days} days until ${event.title} deadline`,
+                  icon: '/favicon.ico'
+                });
+              }
+            }, timeUntilReminder);
+          }
+        });
       }
       
     } catch (error) {
@@ -137,10 +174,29 @@ const TimelineTracker = () => {
 
   const handleUnsubscribe = async (eventId: string) => {
     try {
+      // Remove from offline storage
       const existingSubscriptions = await offlineStorage.getUserData('timeline_subscriptions') || [];
       const updatedSubscriptions = existingSubscriptions.filter((sub: any) => sub.event_id !== eventId);
-      
       await offlineStorage.saveUserData('timeline_subscriptions', updatedSubscriptions);
+      
+      // Try to remove from Supabase if user is authenticated
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { error } = await supabase
+            .from('user_timeline_subscriptions')
+            .update({ status: 'cancelled' })
+            .eq('user_id', userData.user.id)
+            .eq('event_id', eventId);
+          
+          if (error) {
+            console.error('Error updating database:', error);
+          }
+        }
+      } catch (dbError) {
+        console.warn('Database update failed, but updated offline:', dbError);
+      }
+      
       setSubscribedEvents(prev => {
         const newSet = new Set(prev);
         newSet.delete(eventId);

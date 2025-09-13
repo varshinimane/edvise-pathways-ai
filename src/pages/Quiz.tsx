@@ -30,6 +30,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { generateOfflineRecommendations } from '@/lib/offlineRecommendationEngine';
 import { offlineStorage } from '@/lib/offlineStorage';
+import { useGemini } from '@/hooks/useGemini';
 
 interface QuizQuestion {
   id: string;
@@ -246,8 +247,10 @@ const Quiz = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [language, setLanguage] = useState<string>('en');
+  const [useAI, setUseAI] = useState(false);
 
   const { user } = useAuth();
+  const { callGeminiAPI, isLoading: aiLoading } = useGemini();
 
   // Load questions when language changes
   useEffect(() => {
@@ -305,11 +308,71 @@ const Quiz = () => {
         category: q.category
       }));
 
-      console.log('Using rule-based analysis for reliable results');
-      
-      // Use offline recommendation engine for consistent results
-      const analysisData = generateOfflineRecommendations(quizData);
-      console.log('Rule-based analysis completed:', analysisData);
+      let analysisData: QuizAnalysis;
+
+      // Use AI when online and user opts for it, otherwise use rule-based
+      if (!isOffline && useAI && user) {
+        console.log('Using AI analysis for personalized results');
+        try {
+          // Get user profile for context
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+          const contextPrompt = `Analyze this career assessment quiz for a student with the following profile:
+          ${profile ? `
+          - Age: ${profile.age || 'Not specified'}
+          - Gender: ${profile.gender || 'Not specified'}
+          - Class Level: ${profile.class_level || 'Not specified'}
+          - Academic Interests: ${profile.academic_interests?.join(', ') || 'Not specified'}
+          - Preferred Subjects: ${profile.preferred_subjects?.join(', ') || 'Not specified'}
+          - Career Goals: ${profile.career_goals?.join(', ') || 'Not specified'}
+          - Learning Style: ${profile.learning_style || 'Not specified'}
+          - Stream: ${profile.stream || 'Not specified'}
+          ` : 'Profile information not available'}
+          
+          Quiz Responses: ${JSON.stringify(quizData)}
+          
+          Please provide a detailed analysis in JSON format with:
+          1. A personalized summary (2-3 sentences)
+          2. Key strengths (3-5 items)
+          3. Work style description
+          4. Career recommendations (top 5-7) with title, description, match_percentage, reason, required_education, skills, salary_range, growth_prospects
+          5. Course recommendations (3-5 items)
+          
+          Focus on Indian education system and career paths. Make recommendations specific to the user's profile and interests.`;
+
+          const aiResponse = await callGeminiAPI(contextPrompt, 'career_guidance');
+          
+          if (aiResponse) {
+            try {
+              const parsedResponse = JSON.parse(aiResponse.response);
+              analysisData = {
+                summary: parsedResponse.summary,
+                strengths: parsedResponse.strengths || [],
+                work_style: parsedResponse.work_style,
+                career_recommendations: parsedResponse.career_recommendations || [],
+                course_recommendations: parsedResponse.course_recommendations || []
+              };
+              console.log('AI analysis completed:', analysisData);
+            } catch (parseError) {
+              console.warn('Failed to parse AI response, falling back to rule-based');
+              analysisData = generateOfflineRecommendations(quizData);
+            }
+          } else {
+            console.warn('AI analysis failed, falling back to rule-based');
+            analysisData = generateOfflineRecommendations(quizData);
+          }
+        } catch (aiError) {
+          console.warn('AI analysis error, falling back to rule-based:', aiError);
+          analysisData = generateOfflineRecommendations(quizData);
+        }
+      } else {
+        console.log('Using rule-based analysis');
+        analysisData = generateOfflineRecommendations(quizData);
+      }
 
       // Store data offline first (always works)
       const offlineData = {
@@ -512,32 +575,69 @@ const Quiz = () => {
   return (
     <div className="min-h-screen bg-gradient-primary">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            {isOffline ? <WifiOff className="h-6 w-6 text-orange-500" /> : <Wifi className="h-6 w-6 text-green-500" />}
-            <h1 className="text-3xl font-bold text-foreground">Career Assessment Quiz</h1>
-          </div>
+          <Brain className="h-16 w-16 text-accent mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-foreground mb-2">Career Assessment Quiz</h1>
           <p className="text-muted-foreground mb-4">
-            {isOffline 
-              ? 'Working offline - using cached questions and offline recommendations' 
-              : 'AI-powered career guidance based on your interests and preferences'
-            }
+            Discover your ideal career path through our comprehensive assessment
           </p>
           
-          {/* Language Selector */}
-          <div className="flex justify-center space-x-2 mb-6">
-            {LANGUAGE_OPTIONS.map((lang) => (
-              <Button
-                key={lang.code}
-                variant={language === lang.code ? "default" : "outline"}
-                size="sm"
-                onClick={() => setLanguage(lang.code)}
-              >
-                <Globe className="h-4 w-4 mr-1" />
-                {lang.name}
-              </Button>
-            ))}
+          {/* Language Selection */}
+          <div className="flex justify-center items-center space-x-4 mb-4">
+            <label className="text-sm font-medium text-foreground">Language:</label>
+            <select 
+              value={language} 
+              onChange={(e) => setLanguage(e.target.value)}
+              className="px-3 py-1 border border-border rounded-md bg-background text-foreground"
+            >
+              {LANGUAGE_OPTIONS.map(lang => (
+                <option key={lang.code} value={lang.code}>{lang.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Analysis Mode Selection */}
+          {!isOffline && user && (
+            <div className="flex justify-center items-center space-x-4 mb-4">
+              <label className="text-sm font-medium text-foreground">Analysis Mode:</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="rule-based"
+                  name="analysis-mode"
+                  checked={!useAI}
+                  onChange={() => setUseAI(false)}
+                  className="text-accent"
+                />
+                <label htmlFor="rule-based" className="text-sm">Rule-based (Fast)</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="ai-powered"
+                  name="analysis-mode"
+                  checked={useAI}
+                  onChange={() => setUseAI(true)}
+                  className="text-accent"
+                />
+                <label htmlFor="ai-powered" className="text-sm">AI-Powered (Personalized)</label>
+              </div>
+            </div>
+          )}
+
+          {/* Network Status */}
+          <div className="flex justify-center items-center space-x-2 mb-6">
+            {isOffline ? (
+              <>
+                <WifiOff className="h-4 w-4 text-orange-500" />
+                <span className="text-sm text-orange-500">Offline mode - Using rule-based recommendations</span>
+              </>
+            ) : (
+              <>
+                <Wifi className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-500">Online - {useAI ? 'AI-powered' : 'Rule-based'} analysis</span>
+              </>
+            )}
           </div>
         </div>
 
