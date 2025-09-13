@@ -88,32 +88,56 @@ export type Database = {
       }
       profiles: {
         Row: {
+          academic_interests: string[] | null
+          age: number | null
+          career_goals: string[] | null
+          class_level: string | null
           created_at: string
           full_name: string | null
+          gender: string | null
           id: string
+          learning_style: string | null
           location: string | null
           phone: string | null
+          preferred_subjects: string[] | null
           role: Database["public"]["Enums"]["user_role"]
+          stream: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          academic_interests?: string[] | null
+          age?: number | null
+          career_goals?: string[] | null
+          class_level?: string | null
           created_at?: string
           full_name?: string | null
+          gender?: string | null
           id?: string
+          learning_style?: string | null
           location?: string | null
           phone?: string | null
+          preferred_subjects?: string[] | null
           role?: Database["public"]["Enums"]["user_role"]
+          stream?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          academic_interests?: string[] | null
+          age?: number | null
+          career_goals?: string[] | null
+          class_level?: string | null
           created_at?: string
           full_name?: string | null
+          gender?: string | null
           id?: string
+          learning_style?: string | null
           location?: string | null
           phone?: string | null
+          preferred_subjects?: string[] | null
           role?: Database["public"]["Enums"]["user_role"]
+          stream?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -185,7 +209,6 @@ export type Database = {
         Row: {
           amount: number | null
           application_deadline: string | null
-          application_url: string | null
           caste_category: string[] | null
           category: string | null
           created_at: string
@@ -205,7 +228,6 @@ export type Database = {
         Insert: {
           amount?: number | null
           application_deadline?: string | null
-          application_url?: string | null
           caste_category?: string[] | null
           category?: string | null
           created_at?: string
@@ -225,7 +247,6 @@ export type Database = {
         Update: {
           amount?: number | null
           application_deadline?: string | null
-          application_url?: string | null
           caste_category?: string[] | null
           category?: string | null
           created_at?: string
@@ -244,12 +265,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_timeline_subscriptions: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notification_preferences: Json
+          status: string
+          subscribed_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notification_preferences?: Json
+          status?: string
+          subscribed_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notification_preferences?: Json
+          status?: string
+          subscribed_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_personalized_recommendations: {
+        Args: { input_user_id: string }
+        Returns: {
+          recommendation_data: Json
+          recommendation_type: string
+        }[]
+      }
     }
     Enums: {
       user_role: "student" | "admin"
