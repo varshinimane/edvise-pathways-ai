@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { getEmailRedirectUrl, logSiteConfig } from '@/lib/siteConfig';
-import { logEmailVerificationStatus, resendVerificationEmail, getUserVerificationStatus } from '@/lib/emailVerificationUtils';
+import { getEmailRedirectUrl, logSiteConfig, testEmailRedirectGeneration } from '@/lib/siteConfig';
 
 interface AuthContextType {
   user: User | null;
@@ -12,8 +11,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any; data?: any }>;
   signOut: () => Promise<void>;
-  resendVerification: () => Promise<{ success: boolean; error?: string }>;
-  checkVerificationStatus: () => Promise<{ isSignedIn: boolean; isVerified: boolean; email?: string; userId?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,9 +72,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const redirectUrl = getEmailRedirectUrl('/auth/callback');
       
       // Log configuration for debugging
-      if (import.meta.env.DEV) {
-        logEmailVerificationStatus();
-      }
+      logSiteConfig();
+      testEmailRedirectGeneration();
       
       console.log('🔗 Email verification will redirect to:', redirectUrl);
       console.log('📧 Signing up user:', { email, fullName });
@@ -109,13 +105,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-  const resendVerification = async () => {
-    return await resendVerificationEmail();
-  };
-
-  const checkVerificationStatus = async () => {
-    return await getUserVerificationStatus();
-  };
 
   // Simple admin check - you can modify this logic as needed
   const isAdmin = user?.email?.includes('admin') || user?.email?.includes('@admin.') || false;
@@ -129,8 +118,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signIn,
       signUp,
       signOut,
-      resendVerification,
-      checkVerificationStatus,
     }}>
       {children}
     </AuthContext.Provider>
