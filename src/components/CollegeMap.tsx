@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { Card } from '@/components/ui/card';
 import { MapPin, ExternalLink, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 // Fix default Leaflet markers
 delete (L.Icon.Default.prototype as any)._getIconUrl;

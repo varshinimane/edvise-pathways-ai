@@ -57,7 +57,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - Network First Strategy (No Caching)
+// Fetch event - Let API calls pass through, only handle static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -67,33 +67,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Always fetch from network first, no caching
+  // Let API calls pass through untouched (Supabase, external APIs)
+  if (url.hostname.includes('supabase.co') || 
+      url.hostname.includes('api.') || 
+      url.pathname.startsWith('/api/') ||
+      url.hostname !== location.hostname) {
+    // Don't intercept API calls at all
+    return;
+  }
+
+  // For navigation requests, always fetch fresh HTML
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => response)
+        .catch(() => {
+          // Offline fallback for navigation only
+          console.log('Network failed, serving offline fallback');
+          return caches.match('/index.html');
+        })
+    );
+    return;
+  }
+
+  // For static assets, fetch fresh but don't add aggressive headers
   event.respondWith(
-    fetch(request, {
-      cache: 'no-store', // Force fresh fetch
-      headers: {
-        ...request.headers,
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    })
-    .then((response) => {
-      // Return fresh response without caching
-      return response;
-    })
-    .catch(() => {
-      // Only use cache as absolute last resort for navigation
-      if (request.mode === 'navigate') {
-        console.log('Network failed, serving offline fallback');
-        return caches.match('/index.html');
-      }
-      
-      // For other requests, just fail
-      return new Response('Network Error', { 
-        status: 503,
-        statusText: 'Service Unavailable'
-      });
-    })
+    fetch(request)
+      .then((response) => response)
+      .catch(() => {
+        return new Response('Asset not available', { 
+          status: 404,
+          statusText: 'Not Found'
+        });
+      })
   );
 });
 

@@ -4,29 +4,44 @@ export const addTimestampToUrl = (url: string): string => {
   return `${url}${separator}_t=${Date.now()}&_r=${Math.random()}`;
 };
 
-// Override fetch to add no-cache headers
+// Smart fetch override - only add cache busting to static assets, not API calls
 const originalFetch = window.fetch;
 window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  try {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   
-  // Add cache-busting parameters to all requests
-  const finalInput = typeof input === 'string' 
-    ? addTimestampToUrl(input)
-    : input instanceof URL 
-      ? new URL(addTimestampToUrl(input.href))
-      : new Request(addTimestampToUrl(input.url), input);
-
-  const finalInit: RequestInit = {
-    ...init,
-    headers: {
-      ...init?.headers,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
-  };
-
-  return originalFetch(finalInput, finalInit);
+  // Don't modify API calls (Supabase, external APIs, CDNs, map tiles)
+  if (url.includes('supabase.co') || 
+      url.includes('/api/') || 
+      url.includes('openstreetmap.org') || 
+      url.includes('cdnjs.cloudflare.com') || 
+      url.includes('tile.') ||
+      (url.startsWith('http') && !url.includes(window.location.origin))) {
+    return originalFetch(input, init);
+  }
+  
+  // Don't modify same-origin API calls that might be data endpoints
+  if (url.startsWith('/') && (url.includes('/api') || url.includes('.json') || url.includes('/data'))) {
+    return originalFetch(input, init);
+  }
+  
+  // Only add cache busting to static assets (JS, CSS, images)
+  if (url.includes('.js') || url.includes('.css') || url.includes('.png') || url.includes('.jpg') || url.includes('.svg')) {
+    const finalInput = typeof input === 'string' 
+      ? addTimestampToUrl(input)
+      : input instanceof URL 
+        ? new URL(addTimestampToUrl(input.href))
+        : new Request(addTimestampToUrl(input.url), input);
+    
+    return originalFetch(finalInput, init);
+  }
+  
+  // For everything else, use original fetch without modification
+  return originalFetch(input, init);
+  } catch (error) {
+    console.warn('Error in fetch override, falling back to original fetch:', error);
+    return originalFetch(input, init);
+  }
 };
 
 // Disable browser back/forward cache
