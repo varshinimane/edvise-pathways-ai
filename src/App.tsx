@@ -5,19 +5,23 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import Navigation from "./components/Navigation";
 import OfflineIndicator from "./components/OfflineIndicator";
+import SuspenseLoader from "./components/SuspenseLoader";
+import { lazy, Suspense, useEffect } from "react";
 import HomePage from "./pages/HomePage";
-import Dashboard from "./pages/Dashboard";
-import Quiz from "./pages/Quiz";
-import CollegesPage from "./pages/CollegesPage";
-import Scholarships from "./pages/Scholarships";
-import StudyMaterials from "./pages/StudyMaterials";
-import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
-import AdminDashboard from "./pages/AdminDashboard";
-import Recommendations from "./pages/Recommendations";
-import ProfileSettings from "./pages/ProfileSettings";
 import NotFound from "./pages/NotFound";
+
+// Lazy load heavy components for better performance
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Quiz = lazy(() => import("./pages/Quiz"));
+const CollegesPage = lazy(() => import("./pages/CollegesPage"));
+const Scholarships = lazy(() => import("./pages/Scholarships"));
+const StudyMaterials = lazy(() => import("./pages/StudyMaterials"));
+const Chat = lazy(() => import("./pages/Chat"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const Recommendations = lazy(() => import("./pages/Recommendations"));
+const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -70,6 +74,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 const AppContent = () => {
   const { user, loading } = useAuth();
 
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
@@ -93,56 +98,70 @@ const AppContent = () => {
           <Route 
             path="/dashboard" 
             element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <Dashboard />
+                </Suspense>
+              </ProtectedRoute>
             } 
           />
           <Route 
             path="/quiz" 
             element={
-          <ProtectedRoute>
-            <Quiz />
-          </ProtectedRoute>
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <Quiz />
+                </Suspense>
+              </ProtectedRoute>
             } 
           />
           <Route 
             path="/colleges" 
             element={
-          <ProtectedRoute>
-            <CollegesPage />
-          </ProtectedRoute>
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <CollegesPage />
+                </Suspense>
+              </ProtectedRoute>
             } 
           />
           <Route 
             path="/scholarships" 
             element={
-          <ProtectedRoute>
-            <Scholarships />
-          </ProtectedRoute>
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <Scholarships />
+                </Suspense>
+              </ProtectedRoute>
             } 
           />
           <Route 
             path="/study-materials" 
             element={
-          <ProtectedRoute>
-            <StudyMaterials />
-          </ProtectedRoute>
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <StudyMaterials />
+                </Suspense>
+              </ProtectedRoute>
             } 
           />
           <Route 
             path="/chat" 
             element={
-          <ProtectedRoute>
-            <Chat />
-          </ProtectedRoute>
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <Chat />
+                </Suspense>
+              </ProtectedRoute>
             } 
           />
           <Route 
             path="/recommendations" 
             element={
               <ProtectedRoute>
-                <Recommendations />
+                <Suspense fallback={<SuspenseLoader />}>
+                  <Recommendations />
+                </Suspense>
               </ProtectedRoute>
             } 
           />
@@ -150,16 +169,20 @@ const AppContent = () => {
             path="/profile" 
             element={
               <ProtectedRoute>
-                <ProfileSettings />
+                <Suspense fallback={<SuspenseLoader />}>
+                  <ProfileSettings />
+                </Suspense>
               </ProtectedRoute>
             } 
           />
           <Route 
             path="/admin" 
             element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
+              <AdminRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <AdminDashboard />
+                </Suspense>
+              </AdminRoute>
             } 
           />
           <Route path="/404" element={<NotFound />} />

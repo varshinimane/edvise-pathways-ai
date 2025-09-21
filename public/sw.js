@@ -1,39 +1,23 @@
-// public/sw.js - Service Worker for PWA
-const CACHE_NAME = 'edvise-v2';
-const STATIC_CACHE = 'edvise-static-v2';
-const DATA_CACHE = 'edvise-data-v2';
-const OFFLINE_CACHE = 'edvise-offline-v2';
+// public/sw.js - Service Worker with No-Cache Strategy
+// This service worker prioritizes fresh content over caching
+const CACHE_VERSION = 'no-cache-1.0.0';
+const MINIMAL_CACHE = `edvise-minimal-${CACHE_VERSION}`;
+// Only cache absolute essentials for offline fallback
 
-// Static assets to cache (Vite-specific paths)
-const STATIC_ASSETS = [
-  '/',
+// Minimal offline fallback assets only
+const OFFLINE_FALLBACK_ASSETS = [
   '/index.html',
-  '/manifest.json',
-  '/favicon.ico'
+  '/manifest.json'
 ];
 
-// Dynamic assets to cache
-const DYNAMIC_ASSETS = [
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/index.css'
-];
-
-// API endpoints to cache
-const API_ENDPOINTS = [
-  '/api/colleges',
-  '/api/scholarships',
-  '/api/recommendations'
-];
-
-// Install event - cache static assets
+// Install event - minimal caching for offline fallback only
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
+  console.log('Service Worker installing (no-cache strategy)...');
   event.waitUntil(
-    caches.open(STATIC_CACHE)
+    caches.open(MINIMAL_CACHE)
       .then((cache) => {
-        console.log('Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('Caching minimal offline fallback assets');
+        return cache.addAll(OFFLINE_FALLBACK_ASSETS);
       })
       .then(() => self.skipWaiting())
   );
@@ -41,24 +25,39 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
+  console.log('Service Worker activating with version:', CACHE_VERSION);
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DATA_CACHE) {
+            // Delete any cache that doesn't match current version
+            if (!cacheName.includes(CACHE_VERSION)) {
               console.log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
       })
-      .then(() => self.clients.claim())
+      .then(() => {
+        console.log('Cache cleanup complete, claiming clients');
+        return self.clients.claim();
+      })
+      .then(() => {
+        // Notify clients about the update
+        return self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({ 
+              type: 'CACHE_UPDATED', 
+              version: CACHE_VERSION 
+            });
+          });
+        });
+      })
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network First Strategy (No Caching)
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -68,109 +67,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle Supabase API requests
-  if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      caches.open(DATA_CACHE)
-        .then((cache) => {
-          return cache.match(request)
-            .then((response) => {
-              if (response) {
-                // Return cached data immediately
-                return response;
-              }
-              
-              // Fetch from network
-              return fetch(request)
-                .then((networkResponse) => {
-                  // Cache successful responses
-                  if (networkResponse.ok) {
-                    cache.put(request, networkResponse.clone());
-                  }
-                  return networkResponse;
-                })
-                .catch(() => {
-                  // Return offline fallback for API requests
-                  return new Response(
-                    JSON.stringify({ 
-                      error: 'Offline', 
-                      message: 'No internet connection. Using cached data.',
-                      offline: true
-                    }),
-                    { 
-                      status: 200,
-                      headers: { 'Content-Type': 'application/json' }
-                    }
-                  );
-                });
-            });
-        })
-    );
-    return;
-  }
-
-  // Handle Vite dev server requests
-  if (url.hostname === 'localhost' && url.port === '8081') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful responses
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(STATIC_CACHE)
-              .then((cache) => {
-                cache.put(request, responseClone);
-              });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Try to serve from cache
-          return caches.match(request)
-            .then((cachedResponse) => {
-              if (cachedResponse) {
-                return cachedResponse;
-              }
-              
-              // Return offline page for navigation requests
-              if (request.mode === 'navigate') {
-                return caches.match('/index.html');
-              }
-              
-              return new Response('Offline', { status: 503 });
-            });
-        })
-    );
-    return;
-  }
-
-  // Handle static assets
+  // Always fetch from network first, no caching
   event.respondWith(
-    caches.match(request)
-      .then((response) => {
-        if (response) {
-          return response;
-        }
-        
-        return fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse.ok) {
-              const responseClone = networkResponse.clone();
-              caches.open(STATIC_CACHE)
-                .then((cache) => {
-                  cache.put(request, responseClone);
-                });
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            // Return offline page for navigation requests
-            if (request.mode === 'navigate') {
-              return caches.match('/index.html');
-            }
-            return new Response('Offline', { status: 503 });
-          });
-      })
+    fetch(request, {
+      cache: 'no-store', // Force fresh fetch
+      headers: {
+        ...request.headers,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    })
+    .then((response) => {
+      // Return fresh response without caching
+      return response;
+    })
+    .catch(() => {
+      // Only use cache as absolute last resort for navigation
+      if (request.mode === 'navigate') {
+        console.log('Network failed, serving offline fallback');
+        return caches.match('/index.html');
+      }
+      
+      // For other requests, just fail
+      return new Response('Network Error', { 
+        status: 503,
+        statusText: 'Service Unavailable'
+      });
+    })
   );
 });
 
