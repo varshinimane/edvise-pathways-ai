@@ -24,12 +24,17 @@ import {
   Wrench,
   Wifi,
   WifiOff,
-  Globe
+  Globe,
+  Cpu,
+  Zap,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { generateOfflineRecommendations } from '@/lib/offlineRecommendationEngine';
+import { getSmartRecommendations } from '@/lib/recommendationServiceManager';
 import { offlineStorage } from '@/lib/offlineStorage';
+import RecommendationSettings from '@/components/RecommendationSettings';
 
 interface QuizQuestion {
   id: string;
@@ -246,6 +251,8 @@ const Quiz = () => {
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [language, setLanguage] = useState<string>('en');
+  const [recommendationType, setRecommendationType] = useState<'AI' | 'Rule-based'>('AI');
+  const [showSettings, setShowSettings] = useState(false);
 
   const { user } = useAuth();
 
@@ -305,11 +312,20 @@ const Quiz = () => {
         category: q.category
       }));
 
-      console.log('Using rule-based analysis for reliable results');
+      console.log('Using smart recommendation system (AI when online, rule-based when offline)');
       
-      // Use offline recommendation engine for consistent results
-      const analysisData = generateOfflineRecommendations(quizData);
-      console.log('Rule-based analysis completed:', analysisData);
+      // Use smart recommendation system that chooses AI or rule-based automatically
+      const smartResult = await getSmartRecommendations(quizData, { forceOffline: isOffline });
+      const analysisData = {
+        summary: smartResult.summary,
+        strengths: smartResult.strengths,
+        work_style: smartResult.work_style,
+        career_recommendations: smartResult.career_recommendations,
+        course_recommendations: smartResult.course_recommendations
+      };
+      
+      setRecommendationType(smartResult.recommendation_type);
+      console.log(`${smartResult.recommendation_type} recommendations completed in ${smartResult.processing_time}ms:`, analysisData);
 
       // Store data offline first (always works)
       const offlineData = {
@@ -409,7 +425,25 @@ const Quiz = () => {
           <div className="text-center mb-8">
             <CheckCircle className="h-16 w-16 text-accent mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-foreground mb-2">Quiz Complete!</h1>
-            <p className="text-muted-foreground">Here are your personalized career recommendations</p>
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              {recommendationType === 'AI' ? (
+                <div className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full text-sm font-medium shadow-lg">
+                  <Zap className="h-4 w-4" />
+                  <span>AI-Powered Analysis</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-full text-sm font-medium shadow-lg">
+                  <Wrench className="h-4 w-4" />
+                  <span>Expert Rule-Based Analysis</span>
+                </div>
+              )}
+            </div>
+            <p className="text-muted-foreground">
+              {recommendationType === 'AI' 
+                ? 'Advanced AI analysis of your responses for personalized career insights'
+                : 'Comprehensive rule-based analysis for reliable career recommendations'
+              }
+            </p>
           </div>
 
           {/* Analysis Summary */}
@@ -518,10 +552,33 @@ const Quiz = () => {
             {isOffline ? <WifiOff className="h-6 w-6 text-orange-500" /> : <Wifi className="h-6 w-6 text-green-500" />}
             <h1 className="text-3xl font-bold text-foreground">Career Assessment Quiz</h1>
           </div>
-          <p className="text-muted-foreground mb-4">
+          <div className="flex items-center justify-center space-x-4 mb-4">
+            <div className="flex items-center space-x-2">
+              {isOffline ? (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+                  <Wrench className="h-4 w-4" />
+                  <span>Rule-based Mode</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  <Cpu className="h-4 w-4" />
+                  <span>AI-Enhanced Mode</span>
+                </div>
+              )}
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowSettings(true)}
+              className="ml-2"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+          <p className="text-muted-foreground mb-4 text-center">
             {isOffline 
-              ? 'Working offline - using cached questions and offline recommendations' 
-              : 'AI-powered career guidance based on your interests and preferences'
+              ? 'Working offline - using comprehensive rule-based analysis for reliable career recommendations' 
+              : 'Online mode active - leveraging AI technology for enhanced personalized career guidance'
             }
           </p>
           
@@ -614,6 +671,12 @@ const Quiz = () => {
             </Button>
           </div>
         </Card>
+        
+        {/* Settings Modal */}
+        <RecommendationSettings 
+          isOpen={showSettings} 
+          onClose={() => setShowSettings(false)} 
+        />
       </div>
     </div>
   );

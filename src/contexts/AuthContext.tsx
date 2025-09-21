@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getEmailRedirectUrl, logSiteConfig } from '@/lib/siteConfig';
+import { logEmailVerificationStatus, resendVerificationEmail, getUserVerificationStatus } from '@/lib/emailVerificationUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -8,8 +10,10 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any; data?: any }>;
   signOut: () => Promise<void>;
+  resendVerification: () => Promise<{ success: boolean; error?: string }>;
+  checkVerificationStatus: () => Promise<{ isSignedIn: boolean; isVerified: boolean; email?: string; userId?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,23 +71,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        }
+    try {
+      const redirectUrl = getEmailRedirectUrl('/auth/callback');
+      
+      // Log configuration for debugging
+      if (import.meta.env.DEV) {
+        logEmailVerificationStatus();
       }
-    });
-    return { error };
+      
+      console.log('🔗 Email verification will redirect to:', redirectUrl);
+      console.log('📧 Signing up user:', { email, fullName });
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+          }
+        }
+      });
+      
+      if (data?.user && !data.user.email_confirmed_at) {
+        console.log('📮 Verification email sent to:', email);
+        console.log('🔄 User needs to verify email before signing in');
+      }
+      
+      return { error, data };
+    } catch (err) {
+      console.error('❌ Sign up error:', err);
+      return { error: err };
+    }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const resendVerification = async () => {
+    return await resendVerificationEmail();
+  };
+
+  const checkVerificationStatus = async () => {
+    return await getUserVerificationStatus();
   };
 
   // Simple admin check - you can modify this logic as needed
@@ -98,6 +129,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signIn,
       signUp,
       signOut,
+      resendVerification,
+      checkVerificationStatus,
     }}>
       {children}
     </AuthContext.Provider>

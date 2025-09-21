@@ -13,6 +13,7 @@ import Scholarships from "./pages/Scholarships";
 import StudyMaterials from "./pages/StudyMaterials";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
 import Recommendations from "./pages/Recommendations";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -88,6 +89,7 @@ const AppContent = () => {
       <Routes>
           <Route path="/" element={<HomePage />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
           <Route 
             path="/dashboard" 
             element={

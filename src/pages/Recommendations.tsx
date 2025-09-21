@@ -12,7 +12,10 @@ import {
   Brain,
   Award,
   MapPin,
-  ChevronRight
+  ChevronRight,
+  Zap,
+  Cpu,
+  Wrench
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +41,8 @@ const Recommendations = () => {
           career_recommendations: offlineData.recommendations.career_recommendations,
           course_recommendations: { courses: offlineData.recommendations.course_recommendations || [] },
           generated_at: new Date(offlineData.timestamp).toISOString(),
-          source: 'offline'
+          source: 'offline',
+          recommendation_type: 'Rule-based'
         });
         setIsLoading(false);
         return;
@@ -53,7 +57,10 @@ const Recommendations = () => {
           .limit(1);
 
         if (!error && data && data.length > 0) {
-          setRecommendations(data[0]);
+          setRecommendations({
+            ...data[0],
+            recommendation_type: data[0].recommendation_type || 'AI'
+          });
         }
       }
     } catch (error) {
@@ -134,9 +141,25 @@ const Recommendations = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Your Career Recommendations</h1>
+              <div className="flex items-center space-x-3 mb-2">
+                <h1 className="text-3xl font-bold text-foreground">Your Career Recommendations</h1>
+                {recommendations.recommendation_type === 'AI' ? (
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full text-xs font-medium">
+                    <Zap className="h-3 w-3" />
+                    <span>AI-Powered</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-full text-xs font-medium">
+                    <Wrench className="h-3 w-3" />
+                    <span>Rule-Based</span>
+                  </div>
+                )}
+              </div>
               <p className="text-muted-foreground">
-                AI-powered insights based on your quiz responses
+                {recommendations.recommendation_type === 'AI' 
+                  ? 'Advanced AI analysis of your quiz responses for personalized insights'
+                  : 'Comprehensive rule-based analysis for reliable career recommendations'
+                }
               </p>
             </div>
             <div className="flex space-x-3">
@@ -157,10 +180,21 @@ const Recommendations = () => {
             {/* Career Recommendations */}
             <Card className="card-gradient border-border">
               <div className="p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center">
-                  <Target className="h-5 w-5 mr-2 text-primary" />
-                  Top Career Matches
-                </h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center">
+                    <Target className="h-5 w-5 mr-2 text-primary" />
+                    Top Career Matches
+                  </h2>
+                  {recommendations.recommendation_type && (
+                    <div className="text-xs text-muted-foreground flex items-center space-x-1">
+                      {recommendations.recommendation_type === 'AI' ? (
+                        <><Cpu className="h-3 w-3" /> <span>AI Analysis</span></>
+                      ) : (
+                        <><Wrench className="h-3 w-3" /> <span>Rule-Based</span></>
+                      )}
+                    </div>
+                  )}
+                </div>
                 
                 <div className="space-y-6">
                   {recommendations.career_recommendations.map((career: any, index: number) => (
