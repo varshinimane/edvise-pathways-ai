@@ -1,15 +1,16 @@
 {
-  "name": "EdVise - Career Guidance Platform",
+  "name": "EdVise - AI Career Guidance Platform",
   "short_name": "EdVise",
-  "description": "AI-powered career guidance and college recommendation platform for Indian students",
+  "description": "Comprehensive AI-powered career guidance, college recommendations, and scholarship discovery platform for students",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#1A237E",
+  "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["education", "productivity"],
+  "categories": ["education", "productivity", "career", "guidance"],
+  "dir": "ltr",
   "icons": [
     {
       "src": "/favicon.ico",
@@ -17,14 +18,20 @@
       "type": "image/x-icon"
     },
     {
-      "src": "/icon-192.png",
-      "type": "image/png",
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
       "sizes": "192x192",
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-512.png",
-      "type": "image/png",
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "maskable any"
     }
@@ -55,25 +62,43 @@
   },
   "shortcuts": [
     {
-      "name": "Take Quiz",
+      "name": "Career Assessment Quiz",
       "short_name": "Quiz",
-      "description": "Start career assessment quiz",
+      "description": "Take AI-powered career assessment to discover your ideal career path",
       "url": "/quiz",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
-      "name": "View Colleges",
+      "name": "Explore Colleges",
       "short_name": "Colleges",
-      "description": "Browse colleges and universities",
+      "description": "Browse colleges and universities with detailed information and rankings",
       "url": "/colleges",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
-      "name": "Scholarships",
+      "name": "Find Scholarships",
       "short_name": "Scholarships",
-      "description": "Find scholarship opportunities",
+      "description": "Discover scholarship opportunities tailored to your profile",
       "url": "/scholarships",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Timeline Tracker",
+      "short_name": "Timeline",
+      "description": "Track important deadlines and application timelines",
+      "url": "/timeline-tracker",
+      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    {
+      "protocol": "web+edvise",
+      "url": "/?action=%s"
     }
   ]
 }

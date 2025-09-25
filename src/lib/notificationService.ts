@@ -1,379 +1,448 @@
-// Notification Service for Timeline Tracker
-export interface NotificationData {
+// Timeline Tracker Notification Service
+import { TimelineEvent, UserTimelineSubscription } from './timelineData';
+import { offlineStorage } from './offlineStorage';
+
+export interface NotificationPreferences {
+  push: boolean;
+  email: boolean;
+  sms: boolean;
+  sound: boolean;
+  vibration: boolean;
+  reminder_days: number[];
+  quiet_hours: {
+    enabled: boolean;
+    start: string; // HH:MM format
+    end: string; // HH:MM format
+  };
+  categories: {
+    engineering: boolean;
+    medical: boolean;
+    government: boolean;
+    commerce: boolean;
+    arts: boolean;
+    general: boolean;
+  };
+}
+
+export interface PendingNotification {
   id: string;
+  event_id: string;
+  user_id: string;
+  type: 'reminder' | 'deadline' | 'result' | 'counseling';
   title: string;
-  body: string;
-  icon?: string;
-  badge?: string;
-  tag?: string;
-  data?: any;
-  actions?: NotificationAction[];
-  requireInteraction?: boolean;
-  silent?: boolean;
-  timestamp?: number;
-}
-
-export interface NotificationAction {
-  action: string;
-  title: string;
-  icon?: string;
-}
-
-export interface NotificationPermission {
-  granted: boolean;
-  denied: boolean;
-  default: boolean;
+  message: string;
+  scheduled_for: string;
+  data: {
+    event: TimelineEvent;
+    days_until: number;
+    action_url?: string;
+  };
+  status: 'pending' | 'sent' | 'failed' | 'cancelled';
+  created_at: string;
 }
 
 class NotificationService {
-  private isSupported: boolean;
-  private permission: NotificationPermission;
+  private worker: ServiceWorker | null = null;
+  private isInitialized = false;
 
-  constructor() {
-    this.isSupported = 'Notification' in window;
-    this.permission = this.getPermissionStatus();
-  }
+  async init(): Promise<void> {
+    if (this.isInitialized) return;
 
-  private getPermissionStatus(): NotificationPermission {
-    if (!this.isSupported) {
-      return { granted: false, denied: true, default: false };
-    }
-
-    const permission = Notification.permission;
-    return {
-      granted: permission === 'granted',
-      denied: permission === 'denied',
-      default: permission === 'default'
-    };
-  }
-
-  async requestPermission(): Promise<boolean> {
-    if (!this.isSupported) {
-      console.warn('Notifications are not supported in this browser');
-      return false;
-    }
-
-    if (this.permission.granted) {
-      return true;
-    }
-
-    if (this.permission.denied) {
-      console.warn('Notification permission has been denied');
-      return false;
-    }
-
-    try {
+    // Request notification permission
+    if ('Notification' in window) {
       const permission = await Notification.requestPermission();
-      this.permission = this.getPermissionStatus();
-      return permission === 'granted';
+      console.log('Notification permission:', permission);
+    }
+
+    // Register service worker for background notifications
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        this.worker = registration.active;
+        console.log('Service Worker registered:', registration);
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+      }
+    }
+
+    // Setup periodic sync for notifications
+    await this.setupPeriodicSync();
+
+    this.isInitialized = true;
+  }
+
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+    const defaultPrefs: NotificationPreferences = {
+      push: true,
+      email: false,
+      sms: false,
+      sound: true,
+      vibration: true,
+      reminder_days: [30, 15, 7, 3, 1],
+      quiet_hours: {
+        enabled: false,
+        start: '22:00',
+        end: '08:00'
+      },
+      categories: {
+        engineering: true,
+        medical: true,
+        government: true,
+        commerce: true,
+        arts: true,
+        general: true
+      }
+    };
+
+    try {
+      const prefs = await offlineStorage.getUserData(`notification_preferences_${userId}`);
+      return { ...defaultPrefs, ...prefs };
     } catch (error) {
-      console.error('Error requesting notification permission:', error);
+      console.error('Error loading notification preferences:', error);
+      return defaultPrefs;
+    }
+  }
+
+  async updateNotificationPreferences(userId: string, preferences: Partial<NotificationPreferences>): Promise<void> {
+    try {
+      const currentPrefs = await this.getNotificationPreferences(userId);
+      const updatedPrefs = { ...currentPrefs, ...preferences };
+      await offlineStorage.saveUserData(`notification_preferences_${userId}`, updatedPrefs);
+      
+      // Reschedule notifications based on new preferences
+      await this.rescheduleNotifications(userId);
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      throw error;
+    }
+  }
+
+  async scheduleNotifications(userId: string, subscription: UserTimelineSubscription, event: TimelineEvent): Promise<void> {
+    const preferences = await this.getNotificationPreferences(userId);
+    
+    if (!preferences.categories[event.category as keyof typeof preferences.categories]) {
+      return; // User disabled notifications for this category
+    }
+
+    // Special handling for demo event - send immediate notification
+    if (event.id === 'demo-notification-test') {
+      await this.sendDemoNotification(userId, event);
+      return;
+    }
+
+    const reminderDays = subscription.notification_preferences.reminder_days || event.notification_settings.reminder_days;
+    const eventDate = new Date(event.dates.start);
+    const now = new Date();
+
+    // Schedule reminder notifications
+    for (const days of reminderDays) {
+      const reminderDate = new Date(eventDate.getTime() - (days * 24 * 60 * 60 * 1000));
+      
+      if (reminderDate > now) {
+        const notification: PendingNotification = {
+          id: `reminder_${event.id}_${days}days`,
+          event_id: event.id,
+          user_id: userId,
+          type: 'reminder',
+          title: `📅 ${days} days left: ${event.title}`,
+          message: `Don't forget! Application deadline for ${event.title} is in ${days} days. Apply now to avoid missing out.`,
+          scheduled_for: reminderDate.toISOString(),
+          data: {
+            event,
+            days_until: days,
+            action_url: event.website
+          },
+          status: 'pending',
+          created_at: new Date().toISOString()
+        };
+
+        await this.savePendingNotification(notification);
+      }
+    }
+  }
+
+  async sendDemoNotification(userId: string, event: TimelineEvent): Promise<void> {
+    const preferences = await this.getNotificationPreferences(userId);
+    
+    if (!preferences.push || Notification.permission !== 'granted') {
+      console.log('Cannot send demo notification - permission not granted');
+      return;
+    }
+
+    // Send immediate welcome notification
+    setTimeout(() => {
+      const welcomeNotification = new Notification('🎉 Demo Subscription Successful!', {
+        body: 'You have successfully subscribed to the demo event. This notification confirms the system is working!',
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'demo-welcome',
+        requireInteraction: false,
+        data: {
+          eventId: event.id,
+          type: 'demo',
+          url: '/timeline-tracker'
+        }
+      });
+
+      welcomeNotification.onclick = () => {
+        window.focus();
+        welcomeNotification.close();
+      };
+    }, 1000);
+
+    // Send demo reminder notification after 5 seconds
+    setTimeout(() => {
+      const reminderNotification = new Notification('📝 Demo Event Reminder', {
+        body: 'This is a demo reminder notification! In real events, you would get these based on your reminder preferences.',
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'demo-reminder',
+        requireInteraction: true,
+        data: {
+          eventId: event.id,
+          type: 'demo-reminder',
+          url: '/timeline-tracker'
+        },
+        actions: [
+          { action: 'view', title: 'View Timeline' },
+          { action: 'dismiss', title: 'Dismiss' }
+        ] as any
+      });
+
+      reminderNotification.onclick = () => {
+        window.focus();
+        reminderNotification.close();
+      };
+    }, 5000);
+
+    // Send demo deadline notification after 10 seconds
+    setTimeout(() => {
+      const deadlineNotification = new Notification('⚠️ Demo Deadline Alert!', {
+        body: 'Demo Event: This is how you\'ll be notified of important deadlines. Don\'t miss out on real opportunities!',
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'demo-deadline',
+        requireInteraction: true,
+        data: {
+          eventId: event.id,
+          type: 'demo-deadline',
+          url: '/timeline-tracker'
+        }
+      });
+
+      deadlineNotification.onclick = () => {
+        window.focus();
+        deadlineNotification.close();
+      };
+    }, 10000);
+
+    console.log('Demo notifications scheduled successfully!');
+  }
+
+  async sendImmediateNotification(notification: PendingNotification): Promise<boolean> {
+    const preferences = await this.getNotificationPreferences(notification.user_id);
+    
+    // Check quiet hours
+    if (this.isInQuietHours(preferences)) {
+      await this.deferNotification(notification, preferences);
       return false;
     }
-  }
 
-  async showNotification(data: NotificationData): Promise<void> {
-    if (!this.isSupported || !this.permission.granted) {
-      console.warn('Cannot show notification: permission not granted');
-      return;
-    }
+    let success = false;
 
-    try {
-      const notification = new Notification(data.title, {
-        body: data.body,
-        icon: data.icon || '/favicon.ico',
-        badge: data.badge || '/favicon.ico',
-        tag: data.tag,
-        data: data.data,
-        requireInteraction: data.requireInteraction || false,
-        silent: data.silent || false
-      });
-
-      // Auto-close after 5 seconds unless requireInteraction is true
-      if (!data.requireInteraction) {
-        setTimeout(() => {
-          notification.close();
-        }, 5000);
-      }
-
-      // Handle notification click
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-        
-        // Handle custom actions
-        if (data.data && data.data.url) {
-          window.open(data.data.url, '_blank');
-        }
-      };
-
-      // Handle notification close
-      notification.onclose = () => {
-        console.log('Notification closed');
-      };
-
-      // Handle notification error
-      notification.onerror = (error) => {
-        console.error('Notification error:', error);
-      };
-
-    } catch (error) {
-      console.error('Error showing notification:', error);
-    }
-  }
-
-  async scheduleNotification(data: NotificationData, delay: number): Promise<void> {
-    setTimeout(() => {
-      this.showNotification(data);
-    }, delay);
-  }
-
-  async scheduleTimelineReminder(eventId: string, eventTitle: string, daysUntil: number): Promise<void> {
-    const reminderData: NotificationData = {
-      id: `reminder_${eventId}_${daysUntil}`,
-      title: `⏰ Timeline Reminder`,
-      body: `${eventTitle} - ${daysUntil} day${daysUntil > 1 ? 's' : ''} remaining`,
-      icon: '/favicon.ico',
-      tag: `timeline_${eventId}`,
-      data: {
-        eventId,
-        type: 'timeline_reminder',
-        url: `/timeline-tracker`
-      },
-      requireInteraction: daysUntil <= 3, // Require interaction for urgent reminders
-      timestamp: Date.now()
-    };
-
-    await this.showNotification(reminderData);
-  }
-
-  async scheduleEventStartNotification(eventId: string, eventTitle: string): Promise<void> {
-    const startData: NotificationData = {
-      id: `start_${eventId}`,
-      title: `🚀 Event Started`,
-      body: `${eventTitle} application period has begun`,
-      icon: '/favicon.ico',
-      tag: `timeline_${eventId}`,
-      data: {
-        eventId,
-        type: 'event_start',
-        url: `/timeline-tracker`
-      },
-      requireInteraction: true,
-      timestamp: Date.now()
-    };
-
-    await this.showNotification(startData);
-  }
-
-  async scheduleEventEndNotification(eventId: string, eventTitle: string): Promise<void> {
-    const endData: NotificationData = {
-      id: `end_${eventId}`,
-      title: `⚠️ Deadline Approaching`,
-      body: `${eventTitle} application deadline is today`,
-      icon: '/favicon.ico',
-      tag: `timeline_${eventId}`,
-      data: {
-        eventId,
-        type: 'event_end',
-        url: `/timeline-tracker`
-      },
-      requireInteraction: true,
-      timestamp: Date.now()
-    };
-
-    await this.showNotification(endData);
-  }
-
-  async scheduleExamReminder(eventId: string, eventTitle: string, examDate: string): Promise<void> {
-    const examData: NotificationData = {
-      id: `exam_${eventId}`,
-      title: `📝 Exam Tomorrow`,
-      body: `${eventTitle} exam is scheduled for tomorrow`,
-      icon: '/favicon.ico',
-      tag: `exam_${eventId}`,
-      data: {
-        eventId,
-        type: 'exam_reminder',
-        examDate,
-        url: `/timeline-tracker`
-      },
-      requireInteraction: true,
-      timestamp: Date.now()
-    };
-
-    await this.showNotification(examData);
-  }
-
-  async scheduleResultNotification(eventId: string, eventTitle: string): Promise<void> {
-    const resultData: NotificationData = {
-      id: `result_${eventId}`,
-      title: `📊 Results Available`,
-      body: `${eventTitle} results have been declared`,
-      icon: '/favicon.ico',
-      tag: `result_${eventId}`,
-      data: {
-        eventId,
-        type: 'result_available',
-        url: `/timeline-tracker`
-      },
-      requireInteraction: true,
-      timestamp: Date.now()
-    };
-
-    await this.showNotification(resultData);
-  }
-
-  // Service Worker notification handling
-  async registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-    if (!('serviceWorker' in navigator)) {
-      console.warn('Service Worker not supported');
-      return null;
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered:', registration);
-      return registration;
-    } catch (error) {
-      console.error('Service Worker registration failed:', error);
-      return null;
-    }
-  }
-
-  // Background sync for offline notifications
-  async scheduleBackgroundSync(tag: string, data: any): Promise<void> {
-    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
-      console.warn('Background Sync not supported');
-      return;
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      // Background sync for notifications (if supported)
+    // Send push notification
+    if (preferences.push && 'Notification' in window && Notification.permission === 'granted') {
       try {
-        const syncManager = (registration as any).sync;
-        if (syncManager && typeof syncManager.register === 'function') {
-          await syncManager.register(tag);
+        const pushNotification = new Notification(notification.title, {
+          body: notification.message,
+          icon: '/icon-192.png',
+          badge: '/badge-72.png',
+          tag: notification.id,
+          data: notification.data,
+          requireInteraction: notification.type === 'deadline',
+          silent: !preferences.sound
+        });
+
+        pushNotification.onclick = () => {
+          window.open(notification.data.action_url || '/', '_blank');
+          pushNotification.close();
+        };
+
+        success = true;
+      } catch (error) {
+        console.error('Error sending push notification:', error);
+      }
+    }
+
+    notification.status = success ? 'sent' : 'failed';
+    await this.updatePendingNotification(notification);
+
+    return success;
+  }
+
+  private isInQuietHours(preferences: NotificationPreferences): boolean {
+    if (!preferences.quiet_hours.enabled) return false;
+
+    const now = new Date();
+    const currentTime = now.getHours() * 100 + now.getMinutes();
+    const startTime = parseInt(preferences.quiet_hours.start.replace(':', ''));
+    const endTime = parseInt(preferences.quiet_hours.end.replace(':', ''));
+
+    if (startTime < endTime) {
+      return currentTime >= startTime && currentTime <= endTime;
+    } else {
+      return currentTime >= startTime || currentTime <= endTime;
+    }
+  }
+
+  private async deferNotification(notification: PendingNotification, preferences: NotificationPreferences): Promise<void> {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(parseInt(preferences.quiet_hours.end.split(':')[0]));
+    tomorrow.setMinutes(parseInt(preferences.quiet_hours.end.split(':')[1]));
+
+    notification.scheduled_for = tomorrow.toISOString();
+    await this.updatePendingNotification(notification);
+  }
+
+  async checkPendingNotifications(): Promise<void> {
+    try {
+      const now = new Date();
+      const pendingNotifications = await this.getPendingNotifications();
+      
+      for (const notification of pendingNotifications) {
+        const scheduledTime = new Date(notification.scheduled_for);
+        
+        if (scheduledTime <= now && notification.status === 'pending') {
+          await this.sendImmediateNotification(notification);
         }
-      } catch (syncError) {
-        console.warn('Background sync not supported or failed:', syncError);
       }
+    } catch (error) {
+      console.error('Error checking pending notifications:', error);
+    }
+  }
+
+  private async setupPeriodicSync(): Promise<void> {
+    // Setup interval to check notifications every minute
+    setInterval(() => {
+      this.checkPendingNotifications();
+    }, 60000);
+
+    // Setup daily cleanup
+    setInterval(() => {
+      this.cleanupOldNotifications();
+    }, 24 * 60 * 60 * 1000);
+  }
+
+  private async cleanupOldNotifications(): Promise<void> {
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
+      const notifications = await this.getPendingNotifications();
       
-      // Store data for background sync
-      await this.storeSyncData(tag, data);
-    } catch (error) {
-      console.error('Background sync registration failed:', error);
-    }
-  }
+      const toDelete = notifications.filter(n => 
+        new Date(n.created_at) < thirtyDaysAgo && (n.status === 'sent' || n.status === 'failed')
+      );
 
-  private async storeSyncData(tag: string, data: any): Promise<void> {
-    try {
-      const syncData = await this.getSyncData();
-      syncData[tag] = data;
-      localStorage.setItem('notification_sync_data', JSON.stringify(syncData));
-    } catch (error) {
-      console.error('Error storing sync data:', error);
-    }
-  }
-
-  private async getSyncData(): Promise<Record<string, any>> {
-    try {
-      const data = localStorage.getItem('notification_sync_data');
-      return data ? JSON.parse(data) : {};
-    } catch (error) {
-      console.error('Error getting sync data:', error);
-      return {};
-    }
-  }
-
-  // Notification history
-  async getNotificationHistory(): Promise<NotificationData[]> {
-    try {
-      const history = localStorage.getItem('notification_history');
-      return history ? JSON.parse(history) : [];
-    } catch (error) {
-      console.error('Error getting notification history:', error);
-      return [];
-    }
-  }
-
-  async addToHistory(notification: NotificationData): Promise<void> {
-    try {
-      const history = await this.getNotificationHistory();
-      history.unshift(notification);
-      
-      // Keep only last 100 notifications
-      if (history.length > 100) {
-        history.splice(100);
+      for (const notification of toDelete) {
+        await this.deletePendingNotification(notification.id);
       }
-      
-      localStorage.setItem('notification_history', JSON.stringify(history));
     } catch (error) {
-      console.error('Error adding to notification history:', error);
+      console.error('Error cleaning up old notifications:', error);
     }
   }
 
-  // Clear all notifications
-  async clearAllNotifications(): Promise<void> {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      const notifications = await registration.getNotifications();
-      
-      notifications.forEach(notification => {
-        notification.close();
-      });
-    } catch (error) {
-      console.error('Error clearing notifications:', error);
+  // Storage methods for pending notifications
+  private async savePendingNotification(notification: PendingNotification): Promise<void> {
+    const key = `pending_notifications_${notification.user_id}`;
+    const existingNotifications = await offlineStorage.getUserData(key) || [];
+    existingNotifications.push(notification);
+    await offlineStorage.saveUserData(key, existingNotifications);
+  }
+
+  private async updatePendingNotification(notification: PendingNotification): Promise<void> {
+    const key = `pending_notifications_${notification.user_id}`;
+    const existingNotifications = await offlineStorage.getUserData(key) || [];
+    const index = existingNotifications.findIndex((n: PendingNotification) => n.id === notification.id);
+    
+    if (index !== -1) {
+      existingNotifications[index] = notification;
+      await offlineStorage.saveUserData(key, existingNotifications);
     }
+  }
+
+  private async deletePendingNotification(notificationId: string): Promise<void> {
+    const userId = 'current_user'; // Simplified for demo
+    const key = `pending_notifications_${userId}`;
+    const notifications = await offlineStorage.getUserData(key) || [];
+    const filtered = notifications.filter((n: PendingNotification) => n.id !== notificationId);
+    await offlineStorage.saveUserData(key, filtered);
+  }
+
+  private async getPendingNotifications(): Promise<PendingNotification[]> {
+    const userId = 'current_user'; // Simplified for demo
+    const key = `pending_notifications_${userId}`;
+    return await offlineStorage.getUserData(key) || [];
+  }
+
+  // Test notification method
+  async sendTestNotification(userId: string): Promise<void> {
+    const testNotification: PendingNotification = {
+      id: `test_${Date.now()}`,
+      event_id: 'test',
+      user_id: userId,
+      type: 'reminder',
+      title: '🧪 Test Notification',
+      message: 'This is a test notification from EdVise Timeline Tracker!',
+      scheduled_for: new Date().toISOString(),
+      data: {
+        event: {} as TimelineEvent,
+        days_until: 0
+      },
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+
+    await this.sendImmediateNotification(testNotification);
   }
 
   // Get notification statistics
-  async getNotificationStats(): Promise<{
-    total: number;
-    today: number;
-    thisWeek: number;
-    thisMonth: number;
+  async getNotificationStats(userId: string): Promise<{
+    total_sent: number;
+    total_failed: number;
+    total_pending: number;
+    last_notification: string | null;
   }> {
-    try {
-      const history = await this.getNotificationHistory();
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const notifications = await this.getPendingNotifications();
+    const userNotifications = notifications.filter(n => n.user_id === userId);
 
-      return {
-        total: history.length,
-        today: history.filter(n => new Date(n.timestamp || 0) >= today).length,
-        thisWeek: history.filter(n => new Date(n.timestamp || 0) >= weekAgo).length,
-        thisMonth: history.filter(n => new Date(n.timestamp || 0) >= monthAgo).length
-      };
-    } catch (error) {
-      console.error('Error getting notification stats:', error);
-      return { total: 0, today: 0, thisWeek: 0, thisMonth: 0 };
+    const stats = {
+      total_sent: userNotifications.filter(n => n.status === 'sent').length,
+      total_failed: userNotifications.filter(n => n.status === 'failed').length,
+      total_pending: userNotifications.filter(n => n.status === 'pending').length,
+      last_notification: null as string | null
+    };
+
+    const sentNotifications = userNotifications
+      .filter(n => n.status === 'sent')
+      .sort((a, b) => new Date(b.scheduled_for).getTime() - new Date(a.scheduled_for).getTime());
+
+    if (sentNotifications.length > 0) {
+      stats.last_notification = sentNotifications[0].scheduled_for;
     }
+
+    return stats;
   }
 
-  // Check if notifications are supported and enabled
-  isNotificationSupported(): boolean {
-    return this.isSupported;
+  private async rescheduleNotifications(userId: string): Promise<void> {
+    // Implementation for rescheduling notifications based on new preferences
+    console.log('Rescheduling notifications for user:', userId);
   }
 
-  isPermissionGranted(): boolean {
-    return this.permission.granted;
-  }
-
-  canRequestPermission(): boolean {
-    return this.isSupported && this.permission.default;
-  }
-
-  isPermissionDenied(): boolean {
-    return this.permission.denied;
-  }
 }
 
 // Create singleton instance
 export const notificationService = new NotificationService();
 
 // Export types and service
+export type { NotificationPreferences, PendingNotification };
 export default notificationService;

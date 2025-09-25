@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Test - EdVise</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Notification System Test</h1>
+        
+        <div id="browser-info" class="info">
+            <strong>Browser Info:</strong>
+            <div id="browser-details"></div>
+        </div>
+        
+        <div id="permission-status" class="warning">
+            <strong>Permission Status:</strong> <span id="permission-text">Checking...</span>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="request-permission" onclick="requestPermission()">
+                📋 Request Notification Permission
+            </button>
+            <button id="test-notification" onclick="testNotification()" disabled>
+                🔔 Send Test Notification
+            </button>
+            <button id="test-multiple" onclick="testMultipleNotifications()" disabled>
+                🚀 Send Demo Sequence (3 notifications)
+            </button>
+        </div>
+        
+        <button onclick="clearLog()" style="background: #6c757d;">Clear Log</button>
+        
+        <div id="log" class="log">
+            <div><strong>📋 Notification Test Log</strong></div>
+            <div>Ready to test notifications...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div><strong>📋 Notification Test Log</strong></div>';
+        }
+
+        function updatePermissionStatus() {
+            const permissionText = document.getElementById('permission-text');
+            const permissionDiv = document.getElementById('permission-status');
+            const testBtn = document.getElementById('test-notification');
+            const testMultipleBtn = document.getElementById('test-multiple');
+            
+            if (!('Notification' in window)) {
+                permissionText.textContent = 'Not Supported';
+                permissionDiv.className = 'status error';
+                log('❌ Notifications are not supported in this browser');
+                return;
+            }
+            
+            const permission = Notification.permission;
+            permissionText.textContent = permission;
+            
+            switch (permission) {
+                case 'granted':
+                    permissionDiv.className = 'status success';
+                    testBtn.disabled = false;
+                    testMultipleBtn.disabled = false;
+                    log('✅ Notification permission granted');
+                    break;
+                case 'denied':
+                    permissionDiv.className = 'status error';
+                    log('❌ Notification permission denied');
+                    break;
+                case 'default':
+                    permissionDiv.className = 'status warning';
+                    log('⚠️ Notification permission not requested yet');
+                    break;
+            }
+        }
+
+        async function requestPermission() {
+            log('🔄 Requesting notification permission...');
+            
+            if (!('Notification' in window)) {
+                log('❌ This browser does not support notifications');
+                return;
+            }
+            
+            try {
+                const permission = await Notification.requestPermission();
+                log(`🔔 Permission result: ${permission}`);
+                updatePermissionStatus();
+                
+                if (permission === 'granted') {
+                    log('✅ You can now test notifications!');
+                } else if (permission === 'denied') {
+                    log('❌ Permission denied. You may need to reset this in browser settings.');
+                    log('💡 Chrome: Settings > Privacy > Site Settings > Notifications');
+                    log('💡 Firefox: Preferences > Privacy > Permissions > Notifications');
+                    log('💡 Safari: Preferences > Websites > Notifications');
+                }
+            } catch (error) {
+                log(`❌ Error requesting permission: ${error.message}`);
+            }
+        }
+
+        function testNotification() {
+            if (Notification.permission !== 'granted') {
+                log('❌ Permission not granted. Request permission first.');
+                return;
+            }
+            
+            try {
+                log('🔔 Sending test notification...');
+                
+                const notification = new Notification('🧪 Test Notification', {
+                    body: 'This is a test notification from EdVise Timeline Tracker!',
+                    icon: '/favicon.ico',
+                    tag: 'test-notification',
+                    requireInteraction: false
+                });
+                
+                notification.onclick = () => {
+                    log('👆 Test notification clicked!');
+                    notification.close();
+                    window.focus();
+                };
+                
+                notification.onshow = () => {
+                    log('✅ Test notification displayed successfully');
+                };
+                
+                notification.onerror = (error) => {
+                    log(`❌ Notification error: ${error}`);
+                };
+                
+                notification.onclose = () => {
+                    log('🔒 Test notification closed');
+                };
+                
+                setTimeout(() => {
+                    notification.close();
+                    log('⏰ Test notification auto-closed after 5 seconds');
+                }, 5000);
+                
+            } catch (error) {
+                log(`❌ Error creating notification: ${error.message}`);
+            }
+        }
+
+        function testMultipleNotifications() {
+            if (Notification.permission !== 'granted') {
+                log('❌ Permission not granted. Request permission first.');
+                return;
+            }
+            
+            log('🚀 Starting demo notification sequence...');
+            
+            // Notification 1 - Welcome (after 1 second)
+            setTimeout(() => {
+                try {
+                    const welcome = new Notification('🎉 Demo Started!', {
+                        body: 'Demo notification sequence has started. Watch for more!',
+                        tag: 'demo-welcome',
+                        requireInteraction: false
+                    });
+                    welcome.onclick = () => {
+                        log('👆 Welcome notification clicked');
+                        welcome.close();
+                    };
+                    log('1️⃣ Welcome notification sent');
+                } catch (error) {
+                    log(`❌ Error with welcome notification: ${error.message}`);
+                }
+            }, 1000);
+            
+            // Notification 2 - Reminder (after 5 seconds)
+            setTimeout(() => {
+                try {
+                    const reminder = new Notification('📝 Demo Reminder', {
+                        body: 'This is a demo reminder notification - just like real deadline reminders!',
+                        tag: 'demo-reminder',
+                        requireInteraction: true
+                    });
+                    reminder.onclick = () => {
+                        log('👆 Reminder notification clicked');
+                        reminder.close();
+                    };
+                    log('2️⃣ Reminder notification sent');
+                } catch (error) {
+                    log(`❌ Error with reminder notification: ${error.message}`);
+                }
+            }, 5000);
+            
+            // Notification 3 - Deadline (after 10 seconds)
+            setTimeout(() => {
+                try {
+                    const deadline = new Notification('⚠️ Demo Deadline Alert!', {
+                        body: 'Final demo notification! This shows how urgent deadline alerts work.',
+                        tag: 'demo-deadline',
+                        requireInteraction: true
+                    });
+                    deadline.onclick = () => {
+                        log('👆 Deadline notification clicked');
+                        deadline.close();
+                    };
+                    log('3️⃣ Deadline notification sent');
+                    log('✅ Demo sequence complete! Check your system notifications.');
+                } catch (error) {
+                    log(`❌ Error with deadline notification: ${error.message}`);
+                }
+            }, 10000);
+        }
+
+        // Initialize page
+        function init() {
+            // Display browser info
+            const browserDetails = document.getElementById('browser-details');
+            browserDetails.innerHTML = `
+                <div>User Agent: ${navigator.userAgent.substring(0, 100)}...</div>
+                <div>Platform: ${navigator.platform}</div>
+                <div>Notifications Supported: ${('Notification' in window) ? 'Yes' : 'No'}</div>
+                <div>Service Worker Supported: ${('serviceWorker' in navigator) ? 'Yes' : 'No'}</div>
+                <div>Current URL: ${window.location.href}</div>
+            `;
+            
+            updatePermissionStatus();
+            log('🎯 Notification test page loaded');
+            log('💡 This page tests the core browser notification functionality');
+            
+            if (window.location.protocol === 'file:') {
+                log('⚠️ Warning: Running from file:// protocol. Some features may not work.');
+                log('💡 Try running from http://localhost:8080/test-notifications.html');
+            }
+        }
+
+        // Run initialization when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

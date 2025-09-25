@@ -6,6 +6,7 @@ import { useAuth } from "./contexts/AuthContext";
 import Navigation from "./components/Navigation";
 import OfflineIndicator from "./components/OfflineIndicator";
 import SuspenseLoader from "./components/SuspenseLoader";
+import FloatingChatButton from "./components/FloatingChatButton";
 import { lazy, Suspense, useEffect } from "react";
 import HomePage from "./pages/HomePage";
 import Auth from "./pages/Auth";
@@ -18,10 +19,11 @@ const Quiz = lazy(() => import("./pages/Quiz"));
 const CollegesPage = lazy(() => import("./pages/CollegesPage"));
 const Scholarships = lazy(() => import("./pages/Scholarships"));
 const StudyMaterials = lazy(() => import("./pages/StudyMaterials"));
-const Chat = lazy(() => import("./pages/Chat"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Recommendations = lazy(() => import("./pages/Recommendations"));
 const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
+const TimelineTracker = lazy(() => import("./pages/TimelineTracker"));
+const NotificationTestPage = lazy(() => import("./pages/NotificationTestPage"));
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -90,6 +92,7 @@ const AppContent = () => {
     <div className="min-h-screen bg-background">
       {user && <Navigation />}
       <OfflineIndicator />
+      <FloatingChatButton />
       <main className={user ? "pt-16" : ""}>
       <Routes>
           <Route path="/" element={<HomePage />} />
@@ -146,16 +149,6 @@ const AppContent = () => {
             } 
           />
           <Route 
-            path="/chat" 
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<SuspenseLoader />}>
-                  <Chat />
-                </Suspense>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
             path="/recommendations" 
             element={
               <ProtectedRoute>
@@ -171,6 +164,26 @@ const AppContent = () => {
               <ProtectedRoute>
                 <Suspense fallback={<SuspenseLoader />}>
                   <ProfileSettings />
+                </Suspense>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/timeline-tracker" 
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <TimelineTracker />
+                </Suspense>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/notification-test" 
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<SuspenseLoader />}>
+                  <NotificationTestPage />
                 </Suspense>
               </ProtectedRoute>
             } 

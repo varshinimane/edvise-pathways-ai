@@ -54,21 +54,281 @@ export interface UserTimelineSubscription {
   status: 'active' | 'paused' | 'cancelled';
 }
 
-// Comprehensive Timeline Events Database
+// Comprehensive Timeline Events Database for 2025-2026 Academic Year
 export const TIMELINE_EVENTS: TimelineEvent[] = [
-  // Engineering Entrance Exams
+  // 🧪 DEMO EVENT - Test Notifications Immediately
   {
-    id: 'jee-main-2024',
-    title: 'JEE Main 2024 - Session 2',
-    description: 'Joint Entrance Examination for admission to NITs, IIITs, and other engineering colleges',
+    id: 'demo-notification-test',
+    title: '🧪 DEMO: Notification Test Event',
+    description: 'Subscribe to this event to receive immediate demo notifications! Perfect for testing the notification system.',
+    type: 'exam',
+    category: 'general',
+    priority: 'high',
+    dates: {
+      start: '2025-09-22',
+      end: '2025-09-23',
+      exam_date: '2025-09-25',
+      result_date: '2025-09-26'
+    },
+    eligibility: ['Anyone can subscribe for testing', 'No requirements'],
+    application_process: 'This is a demo event for notification testing',
+    fees: {
+      application_fee: 0,
+      currency: 'INR'
+    },
+    documents_required: ['No documents required - Demo only'],
+    website: '/timeline-tracker',
+    contact: {
+      phone: 'Demo Event',
+      email: 'demo@edvise.com'
+    },
+    related_exams: [],
+    related_colleges: ['Demo College'],
+    notification_settings: {
+      reminder_days: [0], // Immediate notification
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-09-22T05:51:00Z',
+    updated_at: '2025-09-22T05:51:00Z'
+  },
+  
+  // ⚠️ URGENT - Closing Soon (September 2025)
+  {
+    id: 'iit-jam-2025',
+    title: 'IIT JAM 2025 (Closing Soon!)',
+    description: 'Joint Admission Test for M.Sc. Programs at IITs - Application deadline approaching',
     type: 'exam',
     category: 'engineering',
     priority: 'high',
     dates: {
-      start: '2024-02-01',
-      end: '2024-03-31',
-      exam_date: '2024-04-15',
-      result_date: '2024-05-01'
+      start: '2025-09-03',
+      end: '2025-09-26',
+      exam_date: '2026-02-02',
+      result_date: '2026-03-19'
+    },
+    eligibility: ['BSc/BTech degree or final year student', 'Subject-specific requirements'],
+    application_process: 'Online through IIT JAM portal',
+    fees: {
+      application_fee: 1950,
+      late_fee: 2450,
+      currency: 'INR'
+    },
+    documents_required: ['Degree certificate/Provisional', 'Photograph', 'Signature'],
+    website: 'https://jam.iitm.ac.in',
+    contact: {
+      phone: '044-2257-4801',
+      email: 'jam@iitm.ac.in'
+    },
+    related_exams: [],
+    related_colleges: ['IITs', 'IISc', 'NITs'],
+    notification_settings: {
+      reminder_days: [7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-09-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'cat-2025',
+    title: 'CAT 2025 (Last Few Days!)',
+    description: 'Common Admission Test for IIMs - Registration ending very soon',
+    type: 'exam',
+    category: 'commerce',
+    priority: 'high',
+    dates: {
+      start: '2025-08-01',
+      end: '2025-09-25',
+      exam_date: '2025-11-24',
+      result_date: '2026-01-05'
+    },
+    eligibility: ['Bachelor degree (50% for General, 45% for reserved)', 'Final year students eligible'],
+    application_process: 'Online through IIM CAT portal',
+    fees: {
+      application_fee: 2400,
+      currency: 'INR'
+    },
+    documents_required: ['Degree certificate', 'Photograph', 'Signature', 'Category certificate'],
+    website: 'https://iimcat.ac.in',
+    contact: {
+      phone: '1800-572-0001',
+      email: 'info@iimcat.ac.in'
+    },
+    related_exams: ['XAT', 'SNAP', 'NMAT'],
+    related_colleges: ['IIMs', 'Top B-Schools'],
+    notification_settings: {
+      reminder_days: [3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-07-15T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'jee-main-2026-session1',
+    title: 'JEE Main 2026 - Session 1',
+    description: 'Joint Entrance Examination for admission to NITs, IIITs, and other engineering colleges for 2026 admissions',
+    type: 'exam',
+    category: 'engineering',
+    priority: 'high',
+    dates: {
+      start: '2025-09-15',
+      end: '2025-10-31',
+      exam_date: '2026-01-24',
+      result_date: '2026-02-12'
+    },
+    eligibility: ['12th with PCM', 'Minimum 75% aggregate', 'Age limit: 25 years'],
+    application_process: 'Online application through NTA website',
+    fees: {
+      application_fee: 1050,
+      late_fee: 2100,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Photograph', 'Signature', 'Category certificate'],
+    website: 'https://jeemain.nta.ac.in',
+    contact: {
+      phone: '0120-6895200',
+      email: 'jeemain@nta.ac.in',
+      helpline: '1800-11-0034'
+    },
+    related_exams: ['JEE Advanced'],
+    related_colleges: ['NITs', 'IIITs', 'GFTIs'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-09-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'neet-2026',
+    title: 'NEET 2026',
+    description: 'National Eligibility cum Entrance Test for medical and dental courses for 2026 admissions',
+    type: 'exam',
+    category: 'medical',
+    priority: 'high',
+    dates: {
+      start: '2025-10-01',
+      end: '2025-11-30',
+      exam_date: '2026-05-03',
+      result_date: '2026-06-14'
+    },
+    eligibility: ['12th with PCB', 'Minimum 50% aggregate', 'Age limit: 17-25 years'],
+    application_process: 'Online application through NTA website',
+    fees: {
+      application_fee: 1750,
+      late_fee: 3500,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Aadhaar card', 'Photograph', 'Signature'],
+    website: 'https://neet.nta.nic.in',
+    contact: {
+      phone: '0120-6895200',
+      email: 'neet@nta.ac.in'
+    },
+    related_exams: ['AIIMS', 'JIPMER'],
+    related_colleges: ['Medical Colleges', 'Dental Colleges'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'upcoming',
+    created_at: '2025-09-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'cuet-ug-2026',
+    title: 'CUET-UG 2026',
+    description: 'Common University Entrance Test for Undergraduate admissions to Central Universities',
+    type: 'exam',
+    category: 'general',
+    priority: 'high',
+    dates: {
+      start: '2025-09-20',
+      end: '2025-10-25',
+      exam_date: '2026-04-15',
+      result_date: '2026-05-31'
+    },
+    eligibility: ['12th in any stream', 'Minimum 50% aggregate for general category'],
+    application_process: 'Online application through NTA CUET portal',
+    fees: {
+      application_fee: 800,
+      late_fee: 1600,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Photograph', 'Signature', 'Category certificate'],
+    website: 'https://cuet.nta.nic.in',
+    contact: {
+      phone: '0120-6895200',
+      email: 'cuet@nta.ac.in'
+    },
+    related_exams: [],
+    related_colleges: ['Delhi University', 'JNU', 'BHU', 'Central Universities'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-09-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'gate-2026',
+    title: 'GATE 2026',
+    description: 'Graduate Aptitude Test in Engineering for M.Tech admissions and PSU recruitment',
+    type: 'exam',
+    category: 'engineering',
+    priority: 'medium',
+    dates: {
+      start: '2025-08-30',
+      end: '2025-10-07',
+      exam_date: '2026-02-01',
+      result_date: '2026-03-16'
+    },
+    eligibility: ['BTech/BE degree or final year student'],
+    application_process: 'Online application through GATE portal',
+    fees: {
+      application_fee: 1850,
+      late_fee: 2350,
+      currency: 'INR'
+    },
+    documents_required: ['BTech certificate/Provisional', 'Photograph', 'Signature'],
+    website: 'https://gate.iitd.ac.in',
+    contact: {
+      phone: '011-26582090',
+      email: 'gate@iitd.ac.in'
+    },
+    related_exams: [],
+    related_colleges: ['IITs', 'IIITs', 'NITs', 'PSUs'],
+    notification_settings: {
+      reminder_days: [15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'closed',
+    created_at: '2025-08-01T00:00:00Z',
+    updated_at: '2025-10-08T00:00:00Z'
+  },
+  {
+    id: 'jee-main-2026-session2',
+    title: 'JEE Main 2026 - Session 2',
+    description: 'Joint Entrance Examination for admission to NITs, IIITs, and other engineering colleges for 2026 admissions',
+    type: 'exam',
+    category: 'engineering',
+    priority: 'high',
+    dates: {
+      start: '2026-01-15',
+      end: '2026-02-28',
+      exam_date: '2026-04-10',
+      result_date: '2026-04-30'
     },
     eligibility: ['12th with PCM', 'Minimum 75% aggregate', 'Age limit: 25 years'],
     application_process: 'Online application through NTA website',
@@ -92,21 +352,21 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       email_notifications: true
     },
     status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   },
   {
-    id: 'jee-advanced-2024',
-    title: 'JEE Advanced 2024',
+    id: 'jee-advanced-2025',
+    title: 'JEE Advanced 2025',
     description: 'Advanced level examination for admission to IITs',
     type: 'exam',
     category: 'engineering',
     priority: 'high',
     dates: {
-      start: '2024-05-01',
-      end: '2024-05-15',
-      exam_date: '2024-06-02',
-      result_date: '2024-06-15'
+      start: '2025-05-01',
+      end: '2025-05-15',
+      exam_date: '2025-06-01',
+      result_date: '2025-06-15'
     },
     eligibility: ['JEE Main qualified', 'Top 2.5 lakh rank holders'],
     application_process: 'Online through JEE Advanced portal',
@@ -128,23 +388,23 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       email_notifications: true
     },
     status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   },
 
   // Medical Entrance Exams
   {
-    id: 'neet-2024',
-    title: 'NEET 2024',
+    id: 'neet-2025',
+    title: 'NEET 2025',
     description: 'National Eligibility cum Entrance Test for medical and dental courses',
     type: 'exam',
     category: 'medical',
     priority: 'high',
     dates: {
-      start: '2024-03-01',
-      end: '2024-04-15',
-      exam_date: '2024-05-05',
-      result_date: '2024-06-14'
+      start: '2024-12-01',
+      end: '2025-01-31',
+      exam_date: '2025-05-04',
+      result_date: '2025-06-14'
     },
     eligibility: ['12th with PCB', 'Minimum 50% aggregate', 'Age limit: 17-25 years'],
     application_process: 'Online application through NTA website',
@@ -166,26 +426,26 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       push_notifications: true,
       email_notifications: true
     },
-    status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    status: 'active',
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   },
 
   // University Admissions
   {
-    id: 'du-admission-2024',
-    title: 'Delhi University Admission 2024',
+    id: 'du-admission-2025',
+    title: 'Delhi University Admission 2025',
     description: 'Admission to undergraduate courses at University of Delhi',
     type: 'admission',
     category: 'general',
     priority: 'high',
     dates: {
-      start: '2024-05-01',
-      end: '2024-05-31',
-      exam_date: '2024-06-15',
-      result_date: '2024-06-30',
-      counseling_start: '2024-07-05',
-      counseling_end: '2024-08-15'
+      start: '2025-05-01',
+      end: '2025-05-31',
+      exam_date: '2025-06-15',
+      result_date: '2025-06-30',
+      counseling_start: '2025-07-05',
+      counseling_end: '2025-08-15'
     },
     eligibility: ['12th any stream', 'Minimum 50% aggregate'],
     application_process: 'Online through DU admission portal',
@@ -207,55 +467,275 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       email_notifications: true
     },
     status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   },
 
-  // Scholarships
+  // State Entrance Exams - Currently Active
   {
-    id: 'merit-scholarship-2024',
-    title: 'Central Sector Scholarship 2024',
-    description: 'Merit-based scholarship for students pursuing higher education',
-    type: 'scholarship',
-    category: 'general',
+    id: 'mht-cet-2026',
+    title: 'MHT CET 2026',
+    description: 'Maharashtra Common Entrance Test for Engineering and Pharmacy admissions for 2026',
+    type: 'exam',
+    category: 'engineering',
+    priority: 'high',
+    dates: {
+      start: '2025-09-01',
+      end: '2025-10-15',
+      exam_date: '2026-05-10',
+      result_date: '2026-06-05',
+      counseling_start: '2026-07-01',
+      counseling_end: '2026-08-31'
+    },
+    eligibility: ['12th with PCM', 'Domicile of Maharashtra', 'Age limit: 25 years'],
+    application_process: 'Online through DTE Maharashtra website',
+    fees: {
+      application_fee: 850,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Domicile certificate', 'Photograph'],
+    website: 'https://cetcell.mahacet.org',
+    contact: {
+      phone: '020-25501982',
+      email: 'help@mahacet.org'
+    },
+    related_exams: ['JEE Main'],
+    related_colleges: ['Maharashtra Engineering Colleges'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-08-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'kcet-2026',
+    title: 'KCET 2026',
+    description: 'Karnataka Common Entrance Test for Engineering, Medical and Dental admissions',
+    type: 'exam',
+    category: 'engineering',
     priority: 'medium',
     dates: {
-      start: '2024-07-01',
-      end: '2024-08-31'
+      start: '2025-09-25',
+      end: '2025-11-10',
+      exam_date: '2026-04-28',
+      result_date: '2026-05-25',
+      counseling_start: '2026-06-15',
+      counseling_end: '2026-08-15'
     },
-    eligibility: ['12th with 80% marks', 'Family income below 8 LPA', 'Admitted to recognized college'],
+    eligibility: ['12th with PCM/PCB', 'Domicile of Karnataka', 'Age limit: 25 years'],
+    application_process: 'Online through KEA website',
+    fees: {
+      application_fee: 650,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Domicile certificate', 'Caste certificate'],
+    website: 'https://kea.kar.nic.in',
+    contact: {
+      phone: '080-22440675',
+      email: 'info@kea.kar.nic.in'
+    },
+    related_exams: ['COMEDK'],
+    related_colleges: ['Karnataka Engineering Colleges'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-09-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'ap-eamcet-2026',
+    title: 'AP EAMCET 2026',
+    description: 'Maharashtra Common Entrance Test for Engineering and Pharmacy admissions',
+    type: 'exam',
+    category: 'engineering',
+    priority: 'medium',
+    dates: {
+      start: '2025-01-15',
+      end: '2025-03-31',
+      exam_date: '2025-05-15',
+      result_date: '2025-06-10',
+      counseling_start: '2025-07-01',
+      counseling_end: '2025-08-31'
+    },
+    eligibility: ['12th with PCM', 'Domicile of Maharashtra', 'Age limit: 25 years'],
+    application_process: 'Online through DTE Maharashtra website',
+    fees: {
+      application_fee: 800,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Domicile certificate', 'Photograph'],
+    website: 'https://cetcell.mahacet.org',
+    contact: {
+      phone: '020-25501982',
+      email: 'help@mahacet.org'
+    },
+    related_exams: ['JEE Main'],
+    related_colleges: ['Maharashtra Engineering Colleges'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'upcoming',
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
+  },
+  {
+    id: 'josaa-counseling-2025',
+    title: 'JoSAA Counselling 2025',
+    description: 'Joint Seat Allocation Authority counselling for IITs, NITs, IIITs admission',
+    type: 'counseling',
+    category: 'engineering',
+    priority: 'high',
+    dates: {
+      start: '2025-06-20',
+      end: '2025-08-15',
+      counseling_start: '2025-06-20',
+      counseling_end: '2025-08-15'
+    },
+    eligibility: ['JEE Main/Advanced qualified', 'Valid rank in respective exams'],
+    application_process: 'Online registration through JoSAA portal',
+    fees: {
+      application_fee: 2000,
+      currency: 'INR'
+    },
+    documents_required: ['JEE scorecard', 'Class 12 certificate', 'Category certificate'],
+    website: 'https://josaa.nic.in',
+    contact: {
+      phone: '011-23581748',
+      email: 'helpdesk@josaa.nic.in'
+    },
+    related_exams: ['JEE Main', 'JEE Advanced'],
+    related_colleges: ['IITs', 'NITs', 'IIITs'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'upcoming',
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
+  },
+
+  // Current Active Scholarships for 2025-2026
+  {
+    id: 'central-sector-scholarship-2025-26',
+    title: 'Central Sector Scholarship 2025-26',
+    description: 'Merit-based scholarship for Class 12 toppers pursuing higher education',
+    type: 'scholarship',
+    category: 'general',
+    priority: 'high',
+    dates: {
+      start: '2025-09-01',
+      end: '2025-10-31'
+    },
+    eligibility: ['Top 20% in Class 12', 'Family income below 8 LPA', 'Admitted to recognized college'],
     application_process: 'Online through National Scholarship Portal',
     fees: {
       application_fee: 0,
       currency: 'INR'
     },
-    documents_required: ['Income certificate', 'Mark sheets', 'Admission proof', 'Bank details'],
+    documents_required: ['Class 12 mark sheet', 'Income certificate', 'Admission proof', 'Bank details'],
     website: 'https://scholarships.gov.in',
     contact: {
       phone: '0120-6619540',
       email: 'helpdesk@scholarships.gov.in'
     },
     related_exams: [],
-    related_colleges: ['All recognized colleges'],
+    related_colleges: ['All recognized colleges and universities'],
     notification_settings: {
       reminder_days: [30, 15, 7, 3],
       push_notifications: true,
       email_notifications: true
     },
-    status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    status: 'active',
+    created_at: '2025-08-15T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
   },
   {
-    id: 'pm-scholarship-2024',
-    title: 'PM Scholarship for Single Girl Child 2024',
+    id: 'nsp-fresh-2025-26',
+    title: 'NSP Fresh Applications 2025-26',
+    description: 'National Scholarship Portal - Fresh applications for various government scholarships',
+    type: 'scholarship',
+    category: 'general',
+    priority: 'high',
+    dates: {
+      start: '2025-09-10',
+      end: '2025-10-25'
+    },
+    eligibility: ['Students from Class 1 to PhD', 'Income criteria varies by scheme'],
+    application_process: 'Online through National Scholarship Portal',
+    fees: {
+      application_fee: 0,
+      currency: 'INR'
+    },
+    documents_required: ['Student ID', 'Aadhaar card', 'Income certificate', 'Bank details'],
+    website: 'https://scholarships.gov.in',
+    contact: {
+      phone: '0120-6619540',
+      email: 'helpdesk@scholarships.gov.in'
+    },
+    related_exams: [],
+    related_colleges: ['All recognized institutions'],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-09-01T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'inspire-scholarship-2025',
+    title: 'INSPIRE Scholarship 2025',
+    description: 'Department of Science & Technology scholarship for students pursuing science courses',
+    type: 'scholarship',
+    category: 'general',
+    priority: 'high',
+    dates: {
+      start: '2024-12-15',
+      end: '2025-01-31'
+    },
+    eligibility: ['Top 1% in Class 12 Science', 'Pursuing BSc/BTech/Integrated MSc'],
+    application_process: 'Online through INSPIRE portal',
+    fees: {
+      application_fee: 0,
+      currency: 'INR'
+    },
+    documents_required: ['Class 12 mark sheet', 'Admission letter', 'Bank details', 'Aadhaar'],
+    website: 'https://online-inspire.gov.in',
+    contact: {
+      phone: '011-26590370',
+      email: 'inspire@nic.in'
+    },
+    related_exams: [],
+    related_colleges: ['Science colleges'],
+    notification_settings: {
+      reminder_days: [15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
+  },
+  {
+    id: 'pm-scholarship-2025',
+    title: 'PM Scholarship for Single Girl Child 2025',
     description: 'Special scholarship for single girl children pursuing higher education',
     type: 'scholarship',
     category: 'general',
     priority: 'medium',
     dates: {
-      start: '2024-06-01',
-      end: '2024-07-31'
+      start: '2025-06-01',
+      end: '2025-07-31'
     },
     eligibility: ['Single girl child', '12th with 60% marks', 'Admitted to recognized college'],
     application_process: 'Online through National Scholarship Portal',
@@ -277,23 +757,59 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       email_notifications: true
     },
     status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   },
 
-  // Government Job Exams
+  // Current Government Job Exams for 2025-2026
   {
-    id: 'upsc-cse-2024',
-    title: 'UPSC Civil Services Examination 2024',
-    description: 'Preliminary examination for Civil Services',
+    id: 'ssc-cgl-2025',
+    title: 'SSC CGL 2025',
+    description: 'Staff Selection Commission Combined Graduate Level Examination - Tier 1',
     type: 'exam',
     category: 'government',
     priority: 'high',
     dates: {
-      start: '2024-02-14',
-      end: '2024-03-05',
-      exam_date: '2024-05-26',
-      result_date: '2024-06-12'
+      start: '2025-09-05',
+      end: '2025-10-14',
+      exam_date: '2025-09-09',
+      result_date: '2025-10-05'
+    },
+    eligibility: ['Bachelor degree from recognized university', 'Age limit: 18-32 years'],
+    application_process: 'Online through SSC website',
+    fees: {
+      application_fee: 100,
+      currency: 'INR'
+    },
+    documents_required: ['Graduation certificate', 'Age proof', 'Caste certificate if applicable'],
+    website: 'https://ssc.nic.in',
+    contact: {
+      phone: '011-24364229',
+      email: 'sscnic@nic.in'
+    },
+    related_exams: ['SSC CHSL', 'SSC MTS'],
+    related_colleges: [],
+    notification_settings: {
+      reminder_days: [15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'active',
+    created_at: '2025-08-15T00:00:00Z',
+    updated_at: '2025-09-22T00:00:00Z'
+  },
+  {
+    id: 'upsc-cse-2026',
+    title: 'UPSC Civil Services Examination 2026',
+    description: 'Preliminary examination for Civil Services - 2026 cycle',
+    type: 'exam',
+    category: 'government',
+    priority: 'high',
+    dates: {
+      start: '2026-02-01',
+      end: '2026-03-10',
+      exam_date: '2026-05-24',
+      result_date: '2026-06-15'
     },
     eligibility: ['Graduation in any stream', 'Age limit: 21-32 years', 'Indian citizen'],
     application_process: 'Online through UPSC website',
@@ -315,23 +831,59 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       email_notifications: true
     },
     status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
+  },
+  {
+    id: 'ssc-cgl-2025',
+    title: 'SSC CGL 2025',
+    description: 'Staff Selection Commission Combined Graduate Level Examination',
+    type: 'exam',
+    category: 'government',
+    priority: 'high',
+    dates: {
+      start: '2025-03-01',
+      end: '2025-04-30',
+      exam_date: '2025-06-14',
+      result_date: '2025-07-31'
+    },
+    eligibility: ['Bachelor degree from recognized university', 'Age limit: 18-27 years'],
+    application_process: 'Online through SSC website',
+    fees: {
+      application_fee: 100,
+      currency: 'INR'
+    },
+    documents_required: ['Graduation certificate', 'Age proof', 'Caste certificate if applicable'],
+    website: 'https://ssc.nic.in',
+    contact: {
+      phone: '011-24364229',
+      email: 'sscnic@nic.in'
+    },
+    related_exams: ['SSC CHSL', 'SSC MTS'],
+    related_colleges: [],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'upcoming',
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   },
 
-  // Banking Exams
+  // Banking Exams - 2025
   {
-    id: 'ibps-po-2024',
-    title: 'IBPS PO 2024',
+    id: 'ibps-po-2025',
+    title: 'IBPS PO 2025',
     description: 'Probationary Officer recruitment in public sector banks',
     type: 'exam',
     category: 'government',
     priority: 'medium',
     dates: {
-      start: '2024-08-01',
-      end: '2024-08-31',
-      exam_date: '2024-10-15',
-      result_date: '2024-11-15'
+      start: '2025-08-01',
+      end: '2025-08-31',
+      exam_date: '2025-10-15',
+      result_date: '2025-11-15'
     },
     eligibility: ['Graduation in any stream', 'Age limit: 20-30 years'],
     application_process: 'Online through IBPS website',
@@ -353,8 +905,44 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       email_notifications: true
     },
     status: 'upcoming',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
+  },
+  {
+    id: 'sbi-po-2025',
+    title: 'SBI PO 2025',
+    description: 'State Bank of India Probationary Officer recruitment',
+    type: 'exam',
+    category: 'government',
+    priority: 'high',
+    dates: {
+      start: '2025-04-01',
+      end: '2025-04-30',
+      exam_date: '2025-06-21',
+      result_date: '2025-07-15'
+    },
+    eligibility: ['Graduation in any stream', 'Age limit: 21-30 years'],
+    application_process: 'Online through SBI website',
+    fees: {
+      application_fee: 750,
+      currency: 'INR'
+    },
+    documents_required: ['Graduation certificate', 'Photograph', 'Signature', 'Caste certificate'],
+    website: 'https://sbi.co.in/careers',
+    contact: {
+      phone: '1800-11-2211',
+      email: 'careers@sbi.co.in'
+    },
+    related_exams: ['SBI Clerk', 'SBI SO'],
+    related_colleges: [],
+    notification_settings: {
+      reminder_days: [30, 15, 7, 3, 1],
+      push_notifications: true,
+      email_notifications: true
+    },
+    status: 'upcoming',
+    created_at: '2024-11-01T00:00:00Z',
+    updated_at: '2024-12-15T00:00:00Z'
   }
 ];
 

@@ -17,6 +17,11 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
+import { 
+  UpcomingDeadlinesWidget,
+  TimelineStatsWidget,
+  QuickActionsWidget 
+} from '@/components/TimelineWidgets';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -281,6 +286,25 @@ const Dashboard = () => {
               </div>
             </div>
           </Card>
+        </div>
+
+        {/* Timeline Tracker Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-foreground">Timeline Tracker</h2>
+            <Link to="/timeline-tracker">
+              <Button variant="outline" size="sm">
+                View Full Timeline
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <UpcomingDeadlinesWidget className="" />
+            <TimelineStatsWidget className="" />
+            <QuickActionsWidget className="" />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

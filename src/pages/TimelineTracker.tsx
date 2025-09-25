@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import NotificationSettings from '@/components/NotificationSettings';
+import NotificationTest from '@/components/NotificationTest';
+import DemoGuide from '@/components/DemoGuide';
 import { 
   Calendar, 
   Clock, 
@@ -41,6 +44,8 @@ import {
   type TimelineEvent 
 } from '@/lib/timelineData';
 import { offlineStorage } from '@/lib/offlineStorage';
+import { notificationService } from '@/lib/notificationService';
+import { calendarExportService } from '@/lib/calendarExport';
 
 const TimelineTracker = () => {
   const [events, setEvents] = useState<TimelineEvent[]>(TIMELINE_EVENTS);
@@ -51,6 +56,12 @@ const TimelineTracker = () => {
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [subscribedEvents, setSubscribedEvents] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  const [showNotificationTest, setShowNotificationTest] = useState(false);
+  const [savedSearches, setSavedSearches] = useState<Array<{name: string, filters: any}>>([]);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [dateRange, setDateRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const [feeRange, setFeeRange] = useState<{min: number, max: number}>({min: 0, max: 10000});
 
   const categories = getAllCategories();
   const types = getAllTypes();
@@ -61,7 +72,63 @@ const TimelineTracker = () => {
 
   useEffect(() => {
     filterEvents();
-  }, [searchQuery, selectedType, selectedCategory, selectedPriority, events]);
+  }, [searchQuery, selectedType, selectedCategory, selectedPriority, dateRange, feeRange, events]);
+
+  useEffect(() => {
+    loadSavedSearches();
+  }, []);
+
+  const loadSavedSearches = async () => {
+    try {
+      const searches = await offlineStorage.getUserData('saved_searches') || [];
+      setSavedSearches(searches);
+    } catch (error) {
+      console.error('Error loading saved searches:', error);
+    }
+  };
+
+  const saveCurrentSearch = async () => {
+    const searchName = prompt('Enter a name for this search:');
+    if (!searchName) return;
+
+    const searchFilter = {
+      searchQuery,
+      selectedType,
+      selectedCategory,
+      selectedPriority,
+      dateRange,
+      feeRange
+    };
+
+    const newSearch = { name: searchName, filters: searchFilter };
+    const updatedSearches = [...savedSearches, newSearch];
+    
+    try {
+      await offlineStorage.saveUserData('saved_searches', updatedSearches);
+      setSavedSearches(updatedSearches);
+    } catch (error) {
+      console.error('Error saving search:', error);
+    }
+  };
+
+  const applySavedSearch = (savedSearch: {name: string, filters: any}) => {
+    const { filters } = savedSearch;
+    setSearchQuery(filters.searchQuery || '');
+    setSelectedType(filters.selectedType || 'all');
+    setSelectedCategory(filters.selectedCategory || 'all');
+    setSelectedPriority(filters.selectedPriority || 'all');
+    setDateRange(filters.dateRange || {start: '', end: ''});
+    setFeeRange(filters.feeRange || {min: 0, max: 10000});
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedType('all');
+    setSelectedCategory('all');
+    setSelectedPriority('all');
+    setDateRange({start: '', end: ''});
+    setFeeRange({min: 0, max: 10000});
+  };
 
   const loadSubscribedEvents = async () => {
     try {
@@ -96,6 +163,41 @@ const TimelineTracker = () => {
       filtered = filtered.filter(event => event.priority === selectedPriority);
     }
 
+    // Apply date range filter
+    if (dateRange.start && dateRange.end) {
+      const startDate = new Date(dateRange.start);
+      const endDate = new Date(dateRange.end);
+      filtered = filtered.filter(event => {
+        const eventStart = new Date(event.dates.start);
+        return eventStart >= startDate && eventStart <= endDate;
+      });
+    }
+
+    // Apply fee range filter
+    if (feeRange.min > 0 || feeRange.max < 10000) {
+      filtered = filtered.filter(event => {
+        const fee = event.fees.application_fee;
+        return fee >= feeRange.min && fee <= feeRange.max;
+      });
+    }
+
+    // Sort by relevance and urgency
+    filtered.sort((a, b) => {
+      // First priority: high priority events
+      if (a.priority === 'high' && b.priority !== 'high') return -1;
+      if (b.priority === 'high' && a.priority !== 'high') return 1;
+      
+      // Second priority: upcoming events (sooner first)
+      const aDaysUntil = Math.ceil((new Date(a.dates.start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const bDaysUntil = Math.ceil((new Date(b.dates.start).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      
+      if (aDaysUntil >= 0 && bDaysUntil >= 0) {
+        return aDaysUntil - bDaysUntil;
+      }
+      
+      return new Date(a.dates.start).getTime() - new Date(b.dates.start).getTime();
+    });
+
     setFilteredEvents(filtered);
   };
 
@@ -125,10 +227,9 @@ const TimelineTracker = () => {
       
       setSubscribedEvents(prev => new Set([...prev, eventId]));
       
-      // Request notification permission
-      if ('Notification' in window && Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
+      // Initialize and schedule notifications
+      await notificationService.init();
+      await notificationService.scheduleNotifications('current_user', subscription, event);
       
     } catch (error) {
       console.error('Error subscribing to event:', error);
@@ -141,6 +242,10 @@ const TimelineTracker = () => {
       const updatedSubscriptions = existingSubscriptions.filter((sub: any) => sub.event_id !== eventId);
       
       await offlineStorage.saveUserData('timeline_subscriptions', updatedSubscriptions);
+      
+      // Cancel scheduled notifications
+      await notificationService.cancelNotifications(eventId, 'current_user');
+      
       setSubscribedEvents(prev => {
         const newSet = new Set(prev);
         newSet.delete(eventId);
@@ -201,13 +306,29 @@ const TimelineTracker = () => {
   const renderEventCard = (event: TimelineEvent) => {
     const daysUntil = getDaysUntilEvent(event.dates.start);
     const isSubscribed = subscribedEvents.has(event.id);
+    const isDemoEvent = event.id === 'demo-notification-test';
 
     return (
-      <Card key={event.id} className="card-gradient border-border p-6 hover:shadow-lg transition-all">
-        <div className="flex justify-between items-start mb-4">
+      <Card key={event.id} className={`card-gradient border-border p-6 hover:shadow-lg transition-all ${
+        isDemoEvent ? 'ring-2 ring-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950' : ''
+      }`}>
+        {isDemoEvent && (
+          <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Bell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                🎯 Demo Event: Subscribe to test notifications instantly! You'll receive 3 demo notifications within 10 seconds.
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-accent/10 rounded-lg">
-              {getEventIcon(event.type)}
+            <div className={`p-2 rounded-lg ${
+              isDemoEvent ? 'bg-blue-500/20' : 'bg-accent/10'
+            }`}>
+              {isDemoEvent ? <Bell className="h-5 w-5 text-blue-600" /> : getEventIcon(event.type)}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-foreground">{event.title}</h3>
@@ -264,7 +385,7 @@ const TimelineTracker = () => {
         </div>
 
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -276,8 +397,7 @@ const TimelineTracker = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => handleSubscribe(event.id)}
-              disabled={isSubscribed}
+              onClick={() => isSubscribed ? handleUnsubscribe(event.id) : handleSubscribe(event.id)}
             >
               {isSubscribed ? (
                 <>
@@ -290,6 +410,17 @@ const TimelineTracker = () => {
                   Subscribe
                 </>
               )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const urls = calendarExportService.generateSharingUrls(event);
+                window.open(urls.google, '_blank');
+              }}
+            >
+              <Calendar className="h-4 w-4 mr-1" />
+              Add to Calendar
             </Button>
           </div>
           
@@ -332,58 +463,166 @@ const TimelineTracker = () => {
           </p>
         </div>
 
+        {/* Demo Guide */}
+        <DemoGuide />
+
         {/* Filters */}
         <Card className="card-gradient border-border p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          <div className="space-y-4">
+            {/* Basic Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Event Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {types.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedPriority} onValueChange={setSelectedPriority}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="high">High Priority</SelectItem>
+                  <SelectItem value="medium">Medium Priority</SelectItem>
+                  <SelectItem value="low">Low Priority</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Event Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {types.map(type => (
-                  <SelectItem key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Advanced Filters Toggle */}
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex items-center space-x-2"
+              >
+                <Filter className="h-4 w-4" />
+                <span>Advanced Filters</span>
+              </Button>
+              
+              <div className="flex items-center space-x-2">
+                {savedSearches.length > 0 && (
+                  <Select onValueChange={(value) => {
+                    const savedSearch = savedSearches.find(s => s.name === value);
+                    if (savedSearch) applySavedSearch(savedSearch);
+                  }}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Saved Searches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {savedSearches.map(search => (
+                        <SelectItem key={search.name} value={search.name}>
+                          {search.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                <Button variant="outline" size="sm" onClick={saveCurrentSearch}>
+                  Save Search
+                </Button>
+                
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  Clear All
+                </Button>
+              </div>
+            </div>
 
-            <Select value={selectedPriority} onValueChange={setSelectedPriority}>
-              <SelectTrigger>
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="high">High Priority</SelectItem>
-                <SelectItem value="medium">Medium Priority</SelectItem>
-                <SelectItem value="low">Low Priority</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Advanced Filters Panel */}
+            {showAdvancedFilters && (
+              <div className="border-t pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Date Range Filter */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Date Range</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="date"
+                        value={dateRange.start}
+                        onChange={(e) => setDateRange(prev => ({...prev, start: e.target.value}))}
+                        placeholder="Start Date"
+                      />
+                      <Input
+                        type="date"
+                        value={dateRange.end}
+                        onChange={(e) => setDateRange(prev => ({...prev, end: e.target.value}))}
+                        placeholder="End Date"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fee Range Filter */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Application Fee Range</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        value={feeRange.min}
+                        onChange={(e) => setFeeRange(prev => ({...prev, min: parseInt(e.target.value) || 0}))}
+                        placeholder="Min Fee (₹)"
+                      />
+                      <Input
+                        type="number"
+                        value={feeRange.max}
+                        onChange={(e) => setFeeRange(prev => ({...prev, max: parseInt(e.target.value) || 10000}))}
+                        placeholder="Max Fee (₹)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Filter Summary */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Active Filters</label>
+                    <div className="flex flex-wrap gap-2">
+                      {searchQuery && <Badge variant="secondary">Search: {searchQuery}</Badge>}
+                      {selectedType !== 'all' && <Badge variant="secondary">Type: {selectedType}</Badge>}
+                      {selectedCategory !== 'all' && <Badge variant="secondary">Category: {selectedCategory}</Badge>}
+                      {selectedPriority !== 'all' && <Badge variant="secondary">Priority: {selectedPriority}</Badge>}
+                      {dateRange.start && <Badge variant="secondary">Date Range</Badge>}
+                      {(feeRange.min > 0 || feeRange.max < 10000) && <Badge variant="secondary">Fee Range</Badge>}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Showing {filteredEvents.length} of {events.length} events
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -419,11 +658,27 @@ const TimelineTracker = () => {
         <Card className="card-gradient border-border p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
           <div className="flex flex-wrap gap-4">
-            <Button variant="outline" className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center space-x-2"
+              onClick={() => setNotificationSettingsOpen(true)}
+            >
               <Bell className="h-4 w-4" />
               <span>Notification Settings</span>
             </Button>
-            <Button variant="outline" className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center space-x-2"
+              onClick={() => setShowNotificationTest(!showNotificationTest)}
+            >
+              <Settings className="h-4 w-4" />
+              <span>{showNotificationTest ? 'Hide' : 'Show'} Test Panel</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex items-center space-x-2"
+              onClick={() => calendarExportService.generateICS(filteredEvents)}
+            >
               <Download className="h-4 w-4" />
               <span>Export Calendar</span>
             </Button>
@@ -437,7 +692,22 @@ const TimelineTracker = () => {
             </Button>
           </div>
         </Card>
+
+        {/* Notification Test Panel */}
+        {showNotificationTest && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold text-foreground mb-4">🧪 Notification Testing</h2>
+            <NotificationTest />
+          </div>
+        )}
       </div>
+
+      {/* Notification Settings Dialog */}
+      <NotificationSettings
+        open={notificationSettingsOpen}
+        onClose={() => setNotificationSettingsOpen(false)}
+        userId="current_user"
+      />
     </div>
   );
 };
